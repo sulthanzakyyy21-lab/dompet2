@@ -522,81 +522,85 @@ const ui = {
       }
 
       return `
-        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-6 transition-all hover:border-slate-300">
+        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-5 transition-all hover:border-slate-300">
           
           <!-- Header Mutasi Dompet -->
-          <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
+          <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 sm:gap-3">
+              <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs flex-shrink-0" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
                 ${wallet.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="font-bold text-sm text-slate-900">${wallet.name}</h3>
-                  <span class="text-[10px] font-semibold font-mono px-2 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate">${wallet.name}</h3>
+                  <span class="text-[9px] sm:text-[10px] font-semibold font-mono px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 flex-shrink-0">
                     ${txList.length} Mutasi
                   </span>
                 </div>
-                <p class="text-[11px] text-slate-400">Buku pembukuan mutasi & running balance</p>
+                <p class="text-[10px] sm:text-[11px] text-slate-400 truncate">Saldo saat ini: <span class="font-mono font-semibold text-slate-700">${utils.formatRupiah(finalBal)}</span></p>
               </div>
             </div>
 
-            <!-- Ringkasan Arus Kas Dompet (Kredit, Debit, Saldo) -->
-            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs font-mono">
-              <div class="px-2.5 py-1 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
-                <span class="text-[10px] font-sans font-medium text-emerald-600 mr-1">Masuk (CR):</span>
+            <!-- Ringkasan Arus Kas Dompet (Kredit, Debit) -->
+            <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
+              <div class="px-2 py-0.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
+                <span class="font-sans font-medium text-emerald-600 mr-0.5">Masuk:</span>
                 <span class="font-bold">+${utils.formatRupiah(income)}</span>
               </div>
-              <div class="px-2.5 py-1 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-700">
-                <span class="text-[10px] font-sans font-medium text-rose-600 mr-1">Keluar (DB):</span>
+              <div class="px-2 py-0.5 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-700">
+                <span class="font-sans font-medium text-rose-600 mr-0.5">Keluar:</span>
                 <span class="font-bold">-${utils.formatRupiah(expense)}</span>
-              </div>
-              <div class="px-2.5 py-1 rounded-lg bg-sky-50/80 border border-sky-100 text-sky-800">
-                <span class="text-[10px] font-sans font-medium text-sky-600 mr-1">Saldo:</span>
-                <span class="font-bold">${utils.formatRupiah(finalBal)}</span>
               </div>
             </div>
           </div>
 
-          <!-- Tabel Mutasi Rekening -->
+          <!-- Tabel Mutasi Rekening (4 Kolom Mobile Friendly: Tanggal, Keterangan, Dompet, Nominal) -->
           <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
                 <tr class="bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-100">
-                  <th class="py-3 px-4 sm:px-5">Tanggal</th>
-                  <th class="py-3 px-4">Keterangan / Uraian</th>
-                  <th class="py-3 px-4 text-right">Kredit (Masuk)</th>
-                  <th class="py-3 px-4 text-right">Debit (Keluar)</th>
-                  <th class="py-3 px-4 text-right">Sisa Saldo</th>
-                  <th class="py-3 px-4 sm:px-5 text-center w-16">Aksi</th>
+                  <th class="py-2.5 px-3 sm:px-4 w-20 sm:w-24 whitespace-nowrap">Tanggal</th>
+                  <th class="py-2.5 px-2 sm:px-4">Keterangan</th>
+                  <th class="py-2.5 px-2 sm:px-3 whitespace-nowrap">Dompet</th>
+                  <th class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap">Nominal</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
                 ${txList.map(tx => {
                   const isIncome = tx.type === 'in';
-                  const balanceAfter = runningBalanceMap.get(tx.realIndex) ?? 0;
                   return `
-                    <tr class="hover:bg-sky-50/30 transition-colors">
-                      <td class="py-3 px-4 sm:px-5 text-slate-500 font-medium whitespace-nowrap">${tx.date}</td>
-                      <td class="py-3 px-4 text-slate-900 font-semibold min-w-[140px]">
-                        <div class="flex items-center gap-2">
+                    <tr class="hover:bg-sky-50/30 transition-colors group">
+                      <!-- 1. Tanggal -->
+                      <td class="py-2.5 px-3 sm:px-4 text-slate-500 font-medium whitespace-nowrap text-[11px] sm:text-xs">
+                        ${tx.date}
+                      </td>
+
+                      <!-- 2. Keterangan -->
+                      <td class="py-2.5 px-2 sm:px-4 text-slate-900 font-semibold text-xs min-w-0">
+                        <div class="flex items-center gap-1.5 min-w-0">
                           <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
-                          <span>${tx.desc}</span>
+                          <span class="truncate block max-w-[120px] sm:max-w-xs" title="${tx.desc}">${tx.desc}</span>
                         </div>
                       </td>
-                      <td class="py-3 px-4 text-right font-mono whitespace-nowrap">
-                        ${isIncome ? `<span class="font-bold text-emerald-600 bg-emerald-50/80 px-2 py-0.5 rounded border border-emerald-100">+${utils.formatRupiah(tx.amount)}</span>` : '<span class="text-slate-300">-</span>'}
+
+                      <!-- 3. Nama Dompet -->
+                      <td class="py-2.5 px-2 sm:px-3 whitespace-nowrap text-[10px] sm:text-xs">
+                        <span class="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/60 max-w-[95px] sm:max-w-none truncate">
+                          <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${hex};"></span>
+                          <span class="truncate">${wallet.name}</span>
+                        </span>
                       </td>
-                      <td class="py-3 px-4 text-right font-mono whitespace-nowrap">
-                        ${!isIncome ? `<span class="font-bold text-rose-600 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-100">-${utils.formatRupiah(tx.amount)}</span>` : '<span class="text-slate-300">-</span>'}
-                      </td>
-                      <td class="py-3 px-4 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
-                        ${utils.formatRupiah(balanceAfter)}
-                      </td>
-                      <td class="py-3 px-4 sm:px-5 text-center whitespace-nowrap">
-                        <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition" title="Hapus Transaksi">
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                        </button>
+
+                      <!-- 4. Nominal (Disatukan Masuk/Keluar + Hapus) -->
+                      <td class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap font-mono text-xs">
+                        <div class="inline-flex items-center gap-1.5 justify-end">
+                          <span class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
+                            ${isIncome ? '+' : '-'} ${utils.formatRupiah(tx.amount)}
+                          </span>
+                          <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-5 h-5 rounded hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition opacity-60 group-hover:opacity-100" title="Hapus Transaksi">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;
