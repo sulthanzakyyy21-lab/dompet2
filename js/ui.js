@@ -452,62 +452,189 @@ const ui = {
     const recentListEl = document.getElementById('recent-tx-list');
     const filterTabsContainer = document.getElementById('tx-wallet-filter-tabs');
     
-    // Ambil transaksi hanya pada bulan & tahun yang difilter
+    // 1. Hitung Running Balance per Dompet secara kronologis (dari awal waktu)
+    const runningBalanceMap = new Map(); // realIndex -> balanceAfterTx
+    const walletFinalBalances = {};
+
+    state.wallets.forEach(wallet => {
+      let currentBal = Number(wallet.budget || 0);
+      
+      const chronoTxs = state.transactions
+        .map((tx, idx) => ({ ...tx, realIndex: idx }))
+        .filter(tx => tx.walletId === wallet.id)
+        .sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
+
+      chronoTxs.forEach(tx => {
+        const amt = Number(tx.amount || 0);
+        if (tx.type === 'in') {
+          currentBal += amt;
+        } else {
+          currentBal -= amt;
+        }
+        runningBalanceMap.set(tx.realIndex, currentBal);
+      });
+
+      walletFinalBalances[wallet.id] = currentBal;
+    });
+
+    // 2. Ambil transaksi yang sesuai dengan filter bulan dan tahun terpilih
     const allFilteredTxs = state.transactions
       .map((tx, idx) => ({ ...tx, realIndex: idx }))
       .filter(tx => {
         const d = new Date(tx.fullDate);
         return d.getMonth() === state.filterMonth && d.getFullYear() === state.filterYear;
       })
-      .reverse();
+      .reverse(); // Transaksi terbaru di atas
 
-    // 1. Render Mini Recent Transactions di Tab Dashboard
+    // Generator template Tabel Mutasi per Rekening (Buku Pembukuan Bank)
+    const buildWalletMutationTable = (wallet, txList, isCompact = false) => {
+      let income = 0;
+      let expense = 0;
+      txList.forEach(tx => {
+        if (tx.type === 'in') income += Number(tx.amount || 0);
+        else expense += Number(tx.amount || 0);
+      });
+
+      const hex = wallet.hex || '#0284c7';
+      const finalBal = walletFinalBalances[wallet.id] ?? Number(wallet.budget || 0);
+
+      if (txList.length === 0) {
+        if (isCompact) return ''; // Lewati dompet kosong pada preview dashboard
+        return `
+          <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-5">
+            <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shadow-xs" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
+                  ${wallet.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h3 class="font-bold text-xs sm:text-sm text-slate-900">${wallet.name}</h3>
+                  <p class="text-[10px] text-slate-400">Saldo saat ini: <span class="font-mono font-semibold text-slate-700">${utils.formatRupiah(finalBal)}</span></p>
+                </div>
+              </div>
+              <span class="text-[10px] text-slate-400 italic">Belum ada mutasi</span>
+            </div>
+            <div class="py-6 text-center text-slate-400 text-xs">
+              Tidak ada catatan mutasi transaksi pada rekening ini di periode terpilih.
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-6 transition-all hover:border-slate-300">
+          
+          <!-- Header Mutasi Dompet -->
+          <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shadow-xs flex-shrink-0" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
+                ${wallet.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="font-bold text-sm text-slate-900">${wallet.name}</h3>
+                  <span class="text-[10px] font-semibold font-mono px-2 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                    ${txList.length} Mutasi
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400">Buku pembukuan mutasi & running balance</p>
+              </div>
+            </div>
+
+            <!-- Ringkasan Arus Kas Dompet (Kredit, Debit, Saldo) -->
+            <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs font-mono">
+              <div class="px-2.5 py-1 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
+                <span class="text-[10px] font-sans font-medium text-emerald-600 mr-1">Masuk (CR):</span>
+                <span class="font-bold">+${utils.formatRupiah(income)}</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-700">
+                <span class="text-[10px] font-sans font-medium text-rose-600 mr-1">Keluar (DB):</span>
+                <span class="font-bold">-${utils.formatRupiah(expense)}</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-sky-50/80 border border-sky-100 text-sky-800">
+                <span class="text-[10px] font-sans font-medium text-sky-600 mr-1">Saldo:</span>
+                <span class="font-bold">${utils.formatRupiah(finalBal)}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Mutasi Rekening -->
+          <div class="overflow-x-auto custom-scrollbar">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-100">
+                  <th class="py-3 px-4 sm:px-5">Tanggal</th>
+                  <th class="py-3 px-4">Keterangan / Uraian</th>
+                  <th class="py-3 px-4 text-right">Kredit (Masuk)</th>
+                  <th class="py-3 px-4 text-right">Debit (Keluar)</th>
+                  <th class="py-3 px-4 text-right">Sisa Saldo</th>
+                  <th class="py-3 px-4 sm:px-5 text-center w-16">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${txList.map(tx => {
+                  const isIncome = tx.type === 'in';
+                  const balanceAfter = runningBalanceMap.get(tx.realIndex) ?? 0;
+                  return `
+                    <tr class="hover:bg-sky-50/30 transition-colors">
+                      <td class="py-3 px-4 sm:px-5 text-slate-500 font-medium whitespace-nowrap">${tx.date}</td>
+                      <td class="py-3 px-4 text-slate-900 font-semibold min-w-[140px]">
+                        <div class="flex items-center gap-2">
+                          <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                          <span>${tx.desc}</span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 text-right font-mono whitespace-nowrap">
+                        ${isIncome ? `<span class="font-bold text-emerald-600 bg-emerald-50/80 px-2 py-0.5 rounded border border-emerald-100">+${utils.formatRupiah(tx.amount)}</span>` : '<span class="text-slate-300">-</span>'}
+                      </td>
+                      <td class="py-3 px-4 text-right font-mono whitespace-nowrap">
+                        ${!isIncome ? `<span class="font-bold text-rose-600 bg-rose-50/80 px-2 py-0.5 rounded border border-rose-100">-${utils.formatRupiah(tx.amount)}</span>` : '<span class="text-slate-300">-</span>'}
+                      </td>
+                      <td class="py-3 px-4 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
+                        ${utils.formatRupiah(balanceAfter)}
+                      </td>
+                      <td class="py-3 px-4 sm:px-5 text-center whitespace-nowrap">
+                        <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition" title="Hapus Transaksi">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    };
+
+    // 3. Render di Dashboard: Tabel Mutasi per Rekening
     if (recentListEl) {
       if (allFilteredTxs.length === 0) {
         recentListEl.innerHTML = `
           <div class="flex flex-col items-center justify-center py-8 px-4 bg-white border border-slate-200/80 rounded-2xl text-center">
-            <p class="text-xs font-semibold text-slate-500">Belum ada aktivitas transaksi pada bulan ini.</p>
+            <p class="text-xs font-semibold text-slate-500">Belum ada aktivitas mutasi transaksi pada bulan ini.</p>
           </div>
         `;
       } else {
-        recentListEl.innerHTML = allFilteredTxs.slice(0, 5).map(tx => {
-          const isIncome = tx.type === 'in';
-          const wallet = state.wallets.find(w => w.id === tx.walletId) || {};
-          return `
-            <div class="bg-white border border-slate-200/80 hover:border-sky-200 p-3 sm:p-3.5 rounded-xl flex justify-between items-center transition-all group">
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isIncome ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'}">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    ${isIncome 
-                      ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>'
-                      : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>'}
-                  </svg>
-                </div>
-                <div class="min-w-0">
-                  <p class="font-semibold text-slate-900 group-hover:text-sky-700 text-xs truncate transition">${tx.desc}</p>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[10px] font-medium px-1.5 py-0.2 rounded bg-sky-50 text-sky-700 border border-sky-100 truncate">${wallet.name || 'Akun'}</span>
-                    <span class="text-[10px] text-slate-400 font-medium">${tx.date}</span>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3 flex-shrink-0">
-                <span class="font-bold text-xs font-mono ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
-                  ${isIncome ? '+' : '-'} ${utils.formatRupiah(tx.amount)}
-                </span>
-                <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-6 h-6 rounded-md hover:bg-rose-50 text-slate-300 hover:text-rose-600 flex items-center justify-center transition" title="Hapus">
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
+        let dashboardTablesHTML = '';
+        state.wallets.forEach(wallet => {
+          const walletTxs = allFilteredTxs.filter(tx => tx.walletId === wallet.id);
+          if (walletTxs.length > 0) {
+            dashboardTablesHTML += buildWalletMutationTable(wallet, walletTxs.slice(0, 5), true);
+          }
+        });
+        recentListEl.innerHTML = dashboardTablesHTML || `
+          <div class="py-6 px-4 bg-white border border-slate-200/80 rounded-2xl text-center text-xs text-slate-400">
+            Belum ada aktivitas transaksi pada bulan ini.
+          </div>
+        `;
       }
     }
 
     if (!listEl) return;
 
-    // 2. Render Tab Filter Dompet untuk Halaman Transaksi
+    // 4. Render Tab Filter Dompet untuk Halaman Mutasi
     if (filterTabsContainer) {
       const activeAll = this.selectedTxWalletTab === 'all' 
         ? 'bg-sky-600 text-white shadow-xs font-semibold' 
@@ -540,7 +667,7 @@ const ui = {
       filterTabsContainer.innerHTML = filterBtnsHTML;
     }
 
-    // 3. Tampilkan Tabel Sendiri-Sendiri per Dompet!
+    // 5. Tampilkan Tabel Mutasi Sendiri-Sendiri per Dompet di Tab Mutasi
     const targetWallets = this.selectedTxWalletTab === 'all' 
       ? state.wallets 
       : state.wallets.filter(w => w.id === this.selectedTxWalletTab);
@@ -553,107 +680,17 @@ const ui = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
           </div>
-          <p class="text-sm font-semibold text-slate-700">Belum ada catatan transaksi pada periode ini</p>
-          <p class="text-xs text-slate-400 mt-1 max-w-xs">Data transaksi pada bulan yang dipilih masih kosong. Tambahkan transaksi baru untuk memulai.</p>
+          <p class="text-sm font-semibold text-slate-700">Belum ada catatan mutasi transaksi pada periode ini</p>
+          <p class="text-xs text-slate-400 mt-1 max-w-xs">Data mutasi pada bulan yang dipilih masih kosong. Tambahkan transaksi baru untuk memulai pembukuan.</p>
         </div>
       `;
       return;
     }
 
-    // Bangun kontainer tabel tersendiri untuk setiap dompet
     let tablesHTML = '';
-
     targetWallets.forEach(wallet => {
       const walletTxs = allFilteredTxs.filter(tx => tx.walletId === wallet.id);
-      
-      let walletIncome = 0;
-      let walletExpense = 0;
-      walletTxs.forEach(tx => {
-        if (tx.type === 'in') walletIncome += Number(tx.amount);
-        else walletExpense += Number(tx.amount);
-      });
-
-      const hex = wallet.hex || '#0284c7';
-
-      tablesHTML += `
-        <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-6 transition-all hover:border-slate-300">
-          
-          <!-- Header Tabel Dompet -->
-          <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-xs" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
-                ${wallet.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h3 class="font-bold text-sm text-slate-900">${wallet.name}</h3>
-                  <span class="text-[10px] font-medium font-mono px-2 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
-                    ${walletTxs.length} Transaksi
-                  </span>
-                </div>
-                <p class="text-[11px] text-slate-400">Tabel pembukuan mutasi khusus rekening ini</p>
-              </div>
-            </div>
-
-            <!-- Ringkasan Arus Kas Dompet Ini -->
-            <div class="flex items-center gap-3 text-xs font-mono">
-              <div class="px-3 py-1.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
-                <span class="text-[10px] font-sans font-medium text-emerald-600 mr-1">Masuk:</span>
-                <span class="font-bold">+${utils.formatRupiah(walletIncome)}</span>
-              </div>
-              <div class="px-3 py-1.5 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-700">
-                <span class="text-[10px] font-sans font-medium text-rose-600 mr-1">Keluar:</span>
-                <span class="font-bold">-${utils.formatRupiah(walletExpense)}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Tabel Transaksi Dompet -->
-          ${walletTxs.length === 0 ? `
-            <div class="py-10 text-center text-slate-400">
-              <p class="text-xs font-medium">Belum ada transaksi pada rekening <span class="font-semibold text-slate-600">${wallet.name}</span> di periode ini.</p>
-            </div>
-          ` : `
-            <div class="overflow-x-auto custom-scrollbar">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="bg-slate-50/60 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-100">
-                    <th class="py-3 px-5">Tanggal</th>
-                    <th class="py-3 px-4">Keterangan</th>
-                    <th class="py-3 px-4">Tipe</th>
-                    <th class="py-3 px-4 text-right">Nominal</th>
-                    <th class="py-3 px-5 text-center w-20">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                  ${walletTxs.map(tx => {
-                    const isIncome = tx.type === 'in';
-                    return `
-                      <tr class="hover:bg-sky-50/30 transition-colors">
-                        <td class="py-3 px-5 text-slate-500 font-medium whitespace-nowrap">${tx.date}</td>
-                        <td class="py-3 px-4 text-slate-900 font-semibold">${tx.desc}</td>
-                        <td class="py-3 px-4 whitespace-nowrap">
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${isIncome ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
-                            ${isIncome ? '↑ Masuk' : '↓ Keluar'}
-                          </span>
-                        </td>
-                        <td class="py-3 px-4 text-right font-mono font-bold whitespace-nowrap ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
-                          ${isIncome ? '+' : '-'} ${utils.formatRupiah(tx.amount)}
-                        </td>
-                        <td class="py-3 px-5 text-center whitespace-nowrap">
-                          <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition" title="Hapus Transaksi">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                          </button>
-                        </td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          `}
-        </div>
-      `;
+      tablesHTML += buildWalletMutationTable(wallet, walletTxs, false);
     });
 
     listEl.innerHTML = tablesHTML;
