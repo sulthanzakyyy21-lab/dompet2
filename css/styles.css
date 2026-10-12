@@ -3,6 +3,9 @@
 :root {
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+
+/* Proportional Lining Figures for numeric typography */
+.font-mono { font-variant-numeric: proportional-nums lining-nums; }
   
   /* Primary Brand Blue Palette (Refined Sapphire & Deep Slate Blue) */
   --color-primary-50: #f0f7ff;
