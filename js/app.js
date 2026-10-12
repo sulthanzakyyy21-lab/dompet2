@@ -2,6 +2,9 @@ const app = {
   init() {
     ui.init();
     ui.initFilters();
+    if (typeof snow !== 'undefined') {
+      snow.init();
+    }
     this.renderAll();
   },
 
