@@ -1,5 +1,6 @@
 const app = {
   init() {
+    ui.init();
     ui.initFilters();
     this.renderAll();
   },
@@ -18,11 +19,17 @@ const app = {
   addTransaction(e) {
     e.preventDefault();
     const walletId = document.getElementById('tx-wallet').value;
-    const amount = Number(document.getElementById('tx-amount').value);
-    const desc = document.getElementById('tx-desc').value;
+    const amountVal = document.getElementById('tx-amount').value;
+    const descVal = document.getElementById('tx-desc').value.trim();
 
     if (!walletId) {
-      alert('Buat dompet terlebih dahulu!');
+      alert('Silakan pilih atau buat dompet terlebih dahulu.');
+      return;
+    }
+
+    const amount = Number(amountVal);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Masukkan nominal transaksi yang valid.');
       return;
     }
 
@@ -30,7 +37,7 @@ const app = {
     const newTx = {
       walletId,
       amount,
-      desc,
+      desc: descVal || (state.currentTxType === 'in' ? 'Pemasukan' : 'Pengeluaran'),
       type: state.currentTxType,
       date: now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       fullDate: now.toISOString()
@@ -43,10 +50,11 @@ const app = {
     document.getElementById('tx-desc').value = '';
 
     this.renderAll();
+    ui.switchTab('dashboard');
   },
 
   deleteTransaction(index) {
-    if (confirm('Hapus pencatatan transaksi ini?')) {
+    if (confirm('Konfirmasi: Hapus transaksi ini dari pembukuan?')) {
       state.transactions.splice(index, 1);
       state.saveData();
       this.renderAll();
@@ -56,10 +64,19 @@ const app = {
   saveWallet(e) {
     e.preventDefault();
     const editId = document.getElementById('wallet-edit-id').value;
-    const name = document.getElementById('wallet-name').value;
-    const budget = Number(document.getElementById('wallet-budget').value);
-    const maxLimit = Number(document.getElementById('wallet-max-limit').value);
-    const monthlyLimit = Number(document.getElementById('wallet-monthly-limit').value);
+    const name = document.getElementById('wallet-name').value.trim();
+    const budget = Number(document.getElementById('wallet-budget').value) || 0;
+    
+    // Limit mingguan & bulanan kini opsional (0 = tanpa limit)
+    const maxLimitVal = document.getElementById('wallet-max-limit').value;
+    const monthlyLimitVal = document.getElementById('wallet-monthly-limit').value;
+    const maxLimit = maxLimitVal !== '' ? Math.max(0, Number(maxLimitVal)) : 0;
+    const monthlyLimit = monthlyLimitVal !== '' ? Math.max(0, Number(monthlyLimitVal)) : 0;
+
+    if (!name) {
+      alert('Nama akun/dompet tidak boleh kosong.');
+      return;
+    }
 
     if (editId) {
       const wallet = state.wallets.find(w => w.id === editId);
@@ -85,7 +102,7 @@ const app = {
 
     state.saveData();
     ui.resetWalletForm();
-    ui.toggleModalWallet(); // Tutup modal otomatis saat save
+    ui.toggleModalWallet(false); // Tutup modal otomatis saat save
     this.renderAll();
   },
 
@@ -95,17 +112,21 @@ const app = {
       document.getElementById('wallet-edit-id').value = wallet.id;
       document.getElementById('wallet-name').value = wallet.name;
       document.getElementById('wallet-budget').value = wallet.budget;
-      document.getElementById('wallet-max-limit').value = wallet.maxLimit;
-      document.getElementById('wallet-monthly-limit').value = wallet.monthlyLimit || 2000000;
+      document.getElementById('wallet-max-limit').value = wallet.maxLimit > 0 ? wallet.maxLimit : '';
+      document.getElementById('wallet-monthly-limit').value = wallet.monthlyLimit > 0 ? wallet.monthlyLimit : '';
+      
+      const modal = document.getElementById('modal-wallet');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
     }
   },
 
   deleteWallet(id) {
     if (state.wallets.length <= 1) {
-      alert('Setidaknya harus ada 1 dompet!');
+      alert('Minimal harus tersedia 1 akun/dompet aktif dalam sistem.');
       return;
     }
-    if (confirm('Hapus dompet ini? Transaksi pada dompet ini akan kehilangan referensi nama dompet.')) {
+    if (confirm('Konfirmasi: Hapus akun dompet ini? Transaksi terkait akan tetap tersimpan.')) {
       state.wallets = state.wallets.filter(w => w.id !== id);
       state.saveData();
       this.renderAll();
@@ -113,11 +134,11 @@ const app = {
   },
 
   exportData() {
-    const backupData = { wallets: state.wallets, transactions: state.transactions };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData));
+    const backupData = { wallets: state.wallets, transactions: state.transactions, exportDate: new Date().toISOString() };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `backup_keuangan_${new Date().toISOString().slice(0,10)}.json`);
+    downloadAnchor.setAttribute("download", `dompetku_backup_${new Date().toISOString().slice(0,10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -131,12 +152,12 @@ const app = {
     reader.onload = function(e) {
       try {
         const parsed = JSON.parse(e.target.result);
-        if (parsed.wallets && parsed.transactions) {
+        if (parsed.wallets && Array.isArray(parsed.wallets) && parsed.transactions && Array.isArray(parsed.transactions)) {
           state.wallets = parsed.wallets;
           state.transactions = parsed.transactions;
           state.saveData();
           app.renderAll();
-          alert('Data berhasil dipulihkan (Restore)!');
+          alert('Data pembukuan berhasil dipulihkan.');
         } else {
           alert('Format file cadangan tidak valid.');
         }

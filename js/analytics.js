@@ -18,7 +18,7 @@ const analytics = {
     const ctx = canvas.getContext('2d');
     
     const daysInMonth = new Date(state.filterYear, state.filterMonth + 1, 0).getDate();
-    const labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+    const labels = Array.from({length: daysInMonth}, (_, i) => `Tgl ${i + 1}`);
     const incomeData = new Array(daysInMonth).fill(0);
     const expenseData = new Array(daysInMonth).fill(0);
 
@@ -36,7 +36,16 @@ const analytics = {
     }
 
     Chart.defaults.color = '#64748b'; // slate-500
-    Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+    Chart.defaults.font.family = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+    // Create subtle gradient fills
+    const incomeGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    incomeGradient.addColorStop(0, 'rgba(16, 185, 129, 0.18)');
+    incomeGradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+
+    const expenseGradient = ctx.createLinearGradient(0, 0, 0, 300);
+    expenseGradient.addColorStop(0, 'rgba(239, 68, 68, 0.16)');
+    expenseGradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
 
     this.trendChart = new Chart(ctx, {
       type: 'line',
@@ -44,47 +53,78 @@ const analytics = {
         labels: labels,
         datasets: [
           {
-            label: 'Pemasukan',
+            label: 'Arus Kas Masuk',
             data: incomeData,
-            borderColor: '#34d399', // emerald-400
-            backgroundColor: 'rgba(52, 211, 153, 0.1)',
-            tension: 0.4,
+            borderColor: '#059669', // emerald-600
+            backgroundColor: incomeGradient,
+            tension: 0.35,
             fill: true,
             borderWidth: 2,
-            pointBackgroundColor: '#34d399',
+            pointBackgroundColor: '#059669',
             pointBorderColor: '#ffffff',
-            pointRadius: 3
+            pointBorderWidth: 1.5,
+            pointRadius: 2.5,
+            pointHoverRadius: 5
           },
           {
-            label: 'Pengeluaran',
+            label: 'Arus Kas Keluar',
             data: expenseData,
-            borderColor: '#fb7185', // rose-400
-            backgroundColor: 'rgba(251, 113, 133, 0.1)',
-            tension: 0.4,
+            borderColor: '#dc2626', // red-600
+            backgroundColor: expenseGradient,
+            tension: 0.35,
             fill: true,
             borderWidth: 2,
-            pointBackgroundColor: '#fb7185',
+            pointBackgroundColor: '#dc2626',
             pointBorderColor: '#ffffff',
-            pointRadius: 3
+            pointBorderWidth: 1.5,
+            pointRadius: 2.5,
+            pointHoverRadius: 5
           }
         ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '700' } } }
+          legend: { 
+            position: 'top',
+            align: 'end',
+            labels: { 
+              boxWidth: 8, 
+              boxHeight: 8,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 16,
+              font: { size: 12, weight: '600' } 
+            } 
+          },
+          tooltip: {
+            backgroundColor: '#0f172a',
+            titleFont: { size: 12, weight: '700' },
+            bodyFont: { size: 12, weight: '500' },
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: function(context) {
+                return ` ${context.dataset.label}: ${utils.formatRupiah(context.raw)}`;
+              }
+            }
+          }
         },
         scales: {
           x: { 
-            grid: { display: false, color: '#f1f5f9' }, // slate-100 
-            ticks: { font: { size: 10, weight: '600' } } 
+            grid: { display: false }, 
+            ticks: { 
+              font: { size: 11, weight: '500' },
+              maxTicksLimit: 10
+            } 
           },
           y: { 
             beginAtZero: true, 
-            grid: { color: '#f1f5f9', borderDash: [4, 4] },
+            grid: { color: '#f1f5f9' },
             ticks: { 
-              font: { size: 10, weight: '600' },
-              callback: (value) => 'Rp ' + (value / 1000) + 'k' 
+              font: { size: 11, weight: '500' },
+              callback: (value) => value >= 1000000 ? 'Rp ' + (value / 1000000).toFixed(1) + 'M' : value >= 1000 ? 'Rp ' + (value / 1000).toFixed(0) + 'k' : 'Rp ' + value
             } 
           }
         },
@@ -115,7 +155,7 @@ const analytics = {
       if (walletExpenses[w.id] > 0) {
         labels.push(w.name);
         data.push(walletExpenses[w.id]);
-        backgroundColors.push(w.hex || '#6366f1');
+        backgroundColors.push(w.hex || '#0284c7');
       }
     });
 
@@ -124,9 +164,9 @@ const analytics = {
     }
 
     if (data.length === 0) {
-      labels.push('Belum ada data');
+      labels.push('Belum ada transaksi');
       data.push(1);
-      backgroundColors.push('#f1f5f9'); // slate-100
+      backgroundColors.push('#f1f5f9');
     }
 
     this.doughnutChart = new Chart(ctx, {
@@ -137,23 +177,38 @@ const analytics = {
           data: data,
           backgroundColor: backgroundColors,
           borderWidth: 2,
-          borderColor: '#ffffff' // white border for light theme
+          borderColor: '#ffffff',
+          hoverOffset: 4
         }]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11, weight: '700' } } },
+          legend: { 
+            position: 'bottom', 
+            labels: { 
+              boxWidth: 8, 
+              boxHeight: 8,
+              usePointStyle: true,
+              pointStyle: 'circle',
+              padding: 14,
+              font: { size: 11, weight: '600' } 
+            } 
+          },
           tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            cornerRadius: 8,
             callbacks: {
               label: function(context) {
-                if (data.length === 1 && data[0] === 1 && labels[0] === 'Belum ada data') return ' Rp 0';
-                return ' ' + utils.formatRupiah(context.raw);
+                if (data.length === 1 && data[0] === 1 && labels[0] === 'Belum ada transaksi') return ' Rp 0';
+                return ' ' + context.label + ': ' + utils.formatRupiah(context.raw);
               }
             }
           }
         },
-        cutout: '75%'
+        cutout: '72%'
       }
     });
   }
