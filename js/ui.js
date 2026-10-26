@@ -30,7 +30,26 @@ const ui = {
         this.toggleModalWallet(false);
       }
     });
+
+    // Inisialisasi otomatis pemisah ribuan koma dan shorthand pada semua input nominal
+    const currencyIds = ['tx-amount', 'wallet-budget', 'wallet-max-limit', 'wallet-monthly-limit'];
+    currencyIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) utils.setupCurrencyInput(el);
+    });
   },
+
+  // Helper untuk menambahkan / memilih nominal cepat dengan format koma
+  setQuickAmount(amount) {
+    const input = document.getElementById('tx-amount');
+    if (!input) return;
+    const current = utils.parseNumber(input.value);
+    const target = current + amount;
+    input.value = utils.formatNumber(target);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+  },
+
 
   // Tab Management
   switchTab(tabId) {

@@ -30,7 +30,7 @@ const app = {
       return;
     }
 
-    const amount = Number(amountVal);
+    const amount = utils.parseNumber(amountVal);
     if (isNaN(amount) || amount <= 0) {
       alert('Masukkan nominal transaksi yang valid.');
       return;
@@ -68,13 +68,13 @@ const app = {
     e.preventDefault();
     const editId = document.getElementById('wallet-edit-id').value;
     const name = document.getElementById('wallet-name').value.trim();
-    const budget = Number(document.getElementById('wallet-budget').value) || 0;
+    const budget = utils.parseNumber(document.getElementById('wallet-budget').value) || 0;
     
     // Limit mingguan & bulanan kini opsional (0 = tanpa limit)
-    const maxLimitVal = document.getElementById('wallet-max-limit').value;
-    const monthlyLimitVal = document.getElementById('wallet-monthly-limit').value;
-    const maxLimit = maxLimitVal !== '' ? Math.max(0, Number(maxLimitVal)) : 0;
-    const monthlyLimit = monthlyLimitVal !== '' ? Math.max(0, Number(monthlyLimitVal)) : 0;
+    const maxLimitVal = document.getElementById('wallet-max-limit').value.trim();
+    const monthlyLimitVal = document.getElementById('wallet-monthly-limit').value.trim();
+    const maxLimit = maxLimitVal !== '' ? Math.max(0, utils.parseNumber(maxLimitVal)) : 0;
+    const monthlyLimit = monthlyLimitVal !== '' ? Math.max(0, utils.parseNumber(monthlyLimitVal)) : 0;
 
     if (!name) {
       alert('Nama akun/dompet tidak boleh kosong.');
@@ -114,9 +114,9 @@ const app = {
     if (wallet) {
       document.getElementById('wallet-edit-id').value = wallet.id;
       document.getElementById('wallet-name').value = wallet.name;
-      document.getElementById('wallet-budget').value = wallet.budget;
-      document.getElementById('wallet-max-limit').value = wallet.maxLimit > 0 ? wallet.maxLimit : '';
-      document.getElementById('wallet-monthly-limit').value = wallet.monthlyLimit > 0 ? wallet.monthlyLimit : '';
+      document.getElementById('wallet-budget').value = wallet.budget > 0 ? utils.formatNumber(wallet.budget) : (wallet.budget === 0 ? '0' : '');
+      document.getElementById('wallet-max-limit').value = wallet.maxLimit > 0 ? utils.formatNumber(wallet.maxLimit) : '';
+      document.getElementById('wallet-monthly-limit').value = wallet.monthlyLimit > 0 ? utils.formatNumber(wallet.monthlyLimit) : '';
       
       const modal = document.getElementById('modal-wallet');
       modal.classList.remove('hidden');
