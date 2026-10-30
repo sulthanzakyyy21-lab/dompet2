@@ -142,10 +142,18 @@ const ui = {
       } else {
         modal.classList.remove('flex');
         modal.classList.add('hidden');
+        this.resetWalletForm();
       }
     } else {
-      modal.classList.toggle('hidden');
-      modal.classList.toggle('flex');
+      const willOpen = modal.classList.contains('hidden');
+      if (willOpen) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+        this.resetWalletForm();
+      }
     }
   },
 
@@ -213,12 +221,100 @@ const ui = {
   },
 
   resetWalletForm() {
-    document.getElementById('wallet-edit-id').value = '';
-    document.getElementById('wallet-name').value = '';
-    document.getElementById('wallet-budget').value = '';
-    document.getElementById('wallet-max-limit').value = '';
-    document.getElementById('wallet-monthly-limit').value = '';
-    document.getElementById('modal-wallet-title').innerText = 'Tambah Rekening / Akun';
+    const editIdInput = document.getElementById('wallet-edit-id');
+    if (editIdInput) editIdInput.value = '';
+    const nameInput = document.getElementById('wallet-name');
+    if (nameInput) nameInput.value = '';
+    const budgetInput = document.getElementById('wallet-budget');
+    if (budgetInput) budgetInput.value = '';
+    const maxLimitInput = document.getElementById('wallet-max-limit');
+    if (maxLimitInput) maxLimitInput.value = '';
+    const monthlyLimitInput = document.getElementById('wallet-monthly-limit');
+    if (monthlyLimitInput) monthlyLimitInput.value = '';
+
+    const titleEl = document.getElementById('modal-wallet-title');
+    if (titleEl) titleEl.innerText = 'Kelola Rekening & Akun';
+
+    const badgeEl = document.getElementById('modal-wallet-badge');
+    if (badgeEl) badgeEl.classList.add('hidden');
+
+    const alertEl = document.getElementById('wallet-edit-alert');
+    if (alertEl) {
+      alertEl.classList.add('hidden');
+      alertEl.classList.remove('flex');
+    }
+
+    const iconWrap = document.getElementById('modal-wallet-icon-wrap');
+    if (iconWrap) {
+      iconWrap.className = 'w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold transition-colors';
+    }
+
+    const saveBtn = document.getElementById('btn-save-wallet');
+    if (saveBtn) {
+      saveBtn.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        <span>Simpan Rekening</span>
+      `;
+      saveBtn.className = 'flex-1 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-xs active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5';
+    }
+
+    const cancelBtn = document.getElementById('btn-cancel-wallet');
+    if (cancelBtn) {
+      cancelBtn.innerText = 'Reset Form';
+      cancelBtn.className = 'bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 rounded-xl text-xs transition active:scale-[0.99] cursor-pointer';
+    }
+
+    this.renderModalWalletList();
+  },
+
+  setWalletEditMode(wallet) {
+    const titleEl = document.getElementById('modal-wallet-title');
+    if (titleEl) titleEl.innerText = `Edit: ${wallet.name}`;
+
+    const badgeEl = document.getElementById('modal-wallet-badge');
+    if (badgeEl) badgeEl.classList.remove('hidden');
+
+    const alertEl = document.getElementById('wallet-edit-alert');
+    const nameDisplay = document.getElementById('wallet-edit-name-display');
+    if (alertEl) {
+      alertEl.classList.remove('hidden');
+      alertEl.classList.add('flex');
+    }
+    if (nameDisplay) {
+      nameDisplay.innerText = wallet.name;
+    }
+
+    const iconWrap = document.getElementById('modal-wallet-icon-wrap');
+    if (iconWrap) {
+      iconWrap.className = 'w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold transition-colors';
+    }
+
+    const saveBtn = document.getElementById('btn-save-wallet');
+    if (saveBtn) {
+      saveBtn.innerHTML = `
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        <span>Simpan Perubahan</span>
+      `;
+      saveBtn.className = 'flex-1 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-xs active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5';
+    }
+
+    const cancelBtn = document.getElementById('btn-cancel-wallet');
+    if (cancelBtn) {
+      cancelBtn.innerText = 'Batal Edit';
+      cancelBtn.className = 'bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold px-4 rounded-xl text-xs transition active:scale-[0.99] cursor-pointer border border-amber-300/80';
+    }
+
+    this.renderModalWalletList();
+
+    const container = document.getElementById('modal-wallet-container');
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const nameInput = document.getElementById('wallet-name');
+    if (nameInput) {
+      setTimeout(() => nameInput.focus(), 60);
+    }
   },
 
   toggleNotification(forceState) {
@@ -318,8 +414,10 @@ const ui = {
   renderModalWalletList() {
     const modalList = document.getElementById('modal-wallet-list');
     if (!modalList) return;
+    const editingId = document.getElementById('wallet-edit-id')?.value || '';
 
     modalList.innerHTML = state.wallets.map(w => {
+      const isEditing = w.id === editingId;
       const hasWeekly = w.maxLimit && w.maxLimit > 0;
       const hasMonthly = w.monthlyLimit && w.monthlyLimit > 0;
       const limitText = [];
@@ -328,17 +426,22 @@ const ui = {
       if (limitText.length === 0) limitText.push('Tanpa Limit');
 
       return `
-        <div class="flex justify-between items-center p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/60 transition">
+        <div class="flex justify-between items-center p-3.5 rounded-xl transition ${isEditing ? 'bg-amber-50/90 border-2 border-amber-400 shadow-sm ring-2 ring-amber-200/50' : 'bg-slate-50 border border-slate-200/80 hover:bg-slate-100/60'}">
           <div class="flex items-center gap-3">
             <div class="w-3.5 h-3.5 rounded-full flex-shrink-0" style="background-color: ${w.hex};"></div>
             <div>
-              <p class="font-semibold text-xs text-slate-900">${w.name}</p>
+              <div class="flex items-center gap-1.5">
+                <p class="font-semibold text-xs text-slate-900">${w.name}</p>
+                ${isEditing ? '<span class="text-[9px] font-bold bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded-md uppercase tracking-wider">Sedang Diedit</span>' : ''}
+              </div>
               <p class="text-[11px] text-slate-500 mt-0.5 font-medium">${limitText.join(' • ')}</p>
             </div>
           </div>
           <div class="flex gap-2">
-            <button type="button" onclick="app.editWallet('${w.id}')" class="text-xs bg-white border border-slate-200 hover:border-slate-300 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition shadow-xs">Edit</button>
-            <button type="button" onclick="app.deleteWallet('${w.id}')" class="text-xs bg-white border border-slate-200 hover:border-rose-200 hover:text-rose-600 text-slate-500 px-2.5 py-1.5 rounded-lg font-medium transition shadow-xs">Hapus</button>
+            <button type="button" onclick="app.editWallet('${w.id}')" class="text-xs ${isEditing ? 'bg-amber-600 hover:bg-amber-700 text-white font-bold' : 'bg-white border border-slate-200 hover:border-slate-300 text-slate-700 font-medium'} px-2.5 py-1.5 rounded-lg transition shadow-xs cursor-pointer">
+              ${isEditing ? 'Sedang Diedit' : 'Edit'}
+            </button>
+            <button type="button" onclick="app.deleteWallet('${w.id}')" class="text-xs bg-white border border-slate-200 hover:border-rose-200 hover:text-rose-600 text-slate-500 px-2.5 py-1.5 rounded-lg font-medium transition shadow-xs cursor-pointer">Hapus</button>
           </div>
         </div>
       `;

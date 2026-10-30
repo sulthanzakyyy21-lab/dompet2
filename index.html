@@ -461,19 +461,33 @@
   </nav>
 
   <div id="modal-wallet" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 animate-modal border border-slate-200">
+    <div id="modal-wallet-container" class="bg-white rounded-2xl p-6 sm:p-7 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto space-y-5 animate-modal border border-slate-200">
 
       <div class="flex justify-between items-start">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+          <div id="modal-wallet-icon-wrap" class="w-8 h-8 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center font-bold transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
           </div>
           <div>
-            <h3 id="modal-wallet-title" class="font-bold text-slate-900 text-base">Kelola Rekening & Akun</h3>
+            <div class="flex items-center gap-2">
+              <h3 id="modal-wallet-title" class="font-bold text-slate-900 text-base">Kelola Rekening & Akun</h3>
+              <span id="modal-wallet-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">Mode Edit</span>
+            </div>
           </div>
         </div>
         <button onclick="ui.toggleModalWallet(false)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition cursor-pointer">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Indikator jelas saat sedang edit dompet -->
+      <div id="wallet-edit-alert" class="hidden items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 transition">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"></span>
+          <span class="text-xs truncate">Sedang mengedit: <strong id="wallet-edit-name-display" class="font-bold"></strong></span>
+        </div>
+        <button type="button" onclick="ui.resetWalletForm()" class="text-[11px] font-bold text-amber-800 hover:text-amber-950 underline ml-2 flex-shrink-0 cursor-pointer">
+          Batal Edit
         </button>
       </div>
 
@@ -501,23 +515,24 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label for="wallet-max-limit" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Limit Mingguan (Rp)</label>
-              <input type="text" inputmode="numeric" id="wallet-max-limit" placeholder=""
+              <input type="text" inputmode="numeric" id="wallet-max-limit" placeholder="Opsional"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400 font-mono">
             </div>
 
             <div>
               <label for="wallet-monthly-limit" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Limit Bulanan (Rp)</label>
-              <input type="text" inputmode="numeric" id="wallet-monthly-limit" placeholder=""
+              <input type="text" inputmode="numeric" id="wallet-monthly-limit" placeholder="Opsional"
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400 font-mono">
             </div>
           </div>
         </div>
 
         <div class="flex gap-2.5 pt-2">
-          <button type="submit" class="flex-1 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-xs active:scale-[0.99] cursor-pointer">
-            Simpan Rekening
+          <button type="submit" id="btn-save-wallet" class="flex-1 bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-700 hover:to-blue-800 text-white font-semibold py-2.5 rounded-xl text-xs transition shadow-xs active:scale-[0.99] cursor-pointer flex items-center justify-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Simpan Rekening</span>
           </button>
-          <button type="button" onclick="ui.resetWalletForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 rounded-xl text-xs transition active:scale-[0.99] cursor-pointer">
+          <button type="button" id="btn-cancel-wallet" onclick="ui.resetWalletForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 rounded-xl text-xs transition active:scale-[0.99] cursor-pointer">
             Reset Form
           </button>
         </div>

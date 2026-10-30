@@ -158,6 +158,8 @@ const app = {
       const modal = document.getElementById('modal-wallet');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+
+      ui.setWalletEditMode(wallet);
     }
   },
 
@@ -167,7 +169,11 @@ const app = {
       return;
     }
     if (confirm('Konfirmasi: Hapus akun dompet ini? Transaksi terkait akan tetap tersimpan.')) {
+      const editId = document.getElementById('wallet-edit-id')?.value;
       state.wallets = state.wallets.filter(w => w.id !== id);
+      if (editId === id) {
+        ui.resetWalletForm();
+      }
       state.saveData();
       this.renderAll();
     }
