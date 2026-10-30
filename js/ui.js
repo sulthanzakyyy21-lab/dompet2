@@ -496,14 +496,18 @@ const ui = {
       walletFinalBalances[wallet.id] = currentBal;
     });
 
-    // 2. Ambil transaksi yang sesuai dengan filter bulan dan tahun terpilih
+    // 2. Ambil transaksi yang sesuai dengan filter bulan dan tahun terpilih (diurutkan terbaru ke terlama)
     const allFilteredTxs = state.transactions
       .map((tx, idx) => ({ ...tx, realIndex: idx }))
       .filter(tx => {
         const d = new Date(tx.fullDate);
         return d.getMonth() === state.filterMonth && d.getFullYear() === state.filterYear;
       })
-      .reverse(); // Transaksi terbaru di atas
+      .sort((a, b) => {
+        const timeB = b.fullDate ? new Date(b.fullDate).getTime() : 0;
+        const timeA = a.fullDate ? new Date(a.fullDate).getTime() : 0;
+        return (timeB - timeA) || (b.realIndex - a.realIndex);
+      });
 
     // Generator template Tabel Mutasi per Rekening (Buku Pembukuan Bank)
     const buildWalletMutationTable = (wallet, txList, isCompact = false) => {
@@ -631,7 +635,7 @@ const ui = {
       `;
     };
 
-    // 3. Render di Dashboard: Tabel Mutasi per Rekening
+    // 3. Render di Dashboard: History Mutasi Rekening Terurut Transaksi Terakhir (Tidak disendirikan per dompet)
     if (recentListEl) {
       if (allFilteredTxs.length === 0) {
         recentListEl.innerHTML = `
@@ -640,16 +644,118 @@ const ui = {
           </div>
         `;
       } else {
-        let dashboardTablesHTML = '';
-        state.wallets.forEach(wallet => {
-          const walletTxs = allFilteredTxs.filter(tx => tx.walletId === wallet.id);
-          if (walletTxs.length > 0) {
-            dashboardTablesHTML += buildWalletMutationTable(wallet, walletTxs.slice(0, 5), true);
-          }
+        const maxRecent = 10;
+        const displayTxs = allFilteredTxs.slice(0, maxRecent);
+
+        let totalIn = 0;
+        let totalOut = 0;
+        allFilteredTxs.forEach(tx => {
+          if (tx.type === 'in') totalIn += Number(tx.amount || 0);
+          else totalOut += Number(tx.amount || 0);
         });
-        recentListEl.innerHTML = dashboardTablesHTML || `
-          <div class="py-6 px-4 bg-white border border-slate-200/80 rounded-2xl text-center text-xs text-slate-400">
-            Belum ada aktivitas transaksi pada bulan ini.
+
+        const rowsHTML = displayTxs.map(tx => {
+          const isIncome = tx.type === 'in';
+          const wallet = state.wallets.find(w => w.id === tx.walletId) || { name: 'Dompet', hex: '#0284c7' };
+          const hex = wallet.hex || '#0284c7';
+
+          return `
+            <tr class="hover:bg-sky-50/30 transition-colors group">
+              <!-- 1. Tanggal -->
+              <td class="py-2.5 px-3 sm:px-4 text-slate-500 font-medium whitespace-nowrap text-[11px] sm:text-xs">
+                ${tx.date}
+              </td>
+
+              <!-- 2. Keterangan -->
+              <td class="py-2.5 px-2 sm:px-4 text-slate-900 font-semibold text-xs min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                  <span class="truncate block max-w-[120px] sm:max-w-xs" title="${tx.desc}">${tx.desc}</span>
+                </div>
+              </td>
+
+              <!-- 3. Nama Dompet -->
+              <td class="py-2.5 px-2 sm:px-3 whitespace-nowrap text-[10px] sm:text-xs">
+                <span class="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/60 max-w-[95px] sm:max-w-none truncate">
+                  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${hex};"></span>
+                  <span class="truncate">${wallet.name}</span>
+                </span>
+              </td>
+
+              <!-- 4. Nominal (Disatukan Masuk/Keluar + Hapus) -->
+              <td class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap font-mono text-xs">
+                <div class="inline-flex items-center gap-1.5 justify-end">
+                  <span class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
+                    ${isIncome ? '+' : '-'} ${utils.formatRupiah(tx.amount)}
+                  </span>
+                  <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-5 h-5 rounded hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition opacity-60 group-hover:opacity-100 cursor-pointer" title="Hapus Transaksi">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        const footerHTML = allFilteredTxs.length > maxRecent ? `
+          <div class="px-4 py-2.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span class="text-[11px] text-slate-400">Menampilkan ${maxRecent} mutasi terbaru dari total ${allFilteredTxs.length} transaksi</span>
+            <button type="button" onclick="ui.switchTab('transactions')" class="text-xs font-semibold text-sky-700 hover:text-sky-800 transition inline-flex items-center gap-1 cursor-pointer">
+              <span>Lihat Seluruh Mutasi</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        ` : '';
+
+        recentListEl.innerHTML = `
+          <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
+            <!-- Header Mutasi Gabungan Terkini -->
+            <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div class="flex items-center gap-2.5 sm:gap-3">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs flex-shrink-0 bg-sky-50 text-sky-700 border border-sky-100">
+                  <svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <h3 class="font-bold text-xs sm:text-sm text-slate-900 truncate">Mutasi Rekening Terkini</h3>
+                    <span class="text-[9px] sm:text-[10px] font-semibold font-mono px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 flex-shrink-0">
+                      ${allFilteredTxs.length} Mutasi
+                    </span>
+                  </div>
+                  <p class="text-[10px] sm:text-[11px] text-slate-400 truncate">Semua dompet • Urut dari transaksi paling baru</p>
+                </div>
+              </div>
+
+              <!-- Ringkasan Arus Kas Mutasi Terkini -->
+              <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
+                <div class="px-2 py-0.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
+                  <span class="font-sans font-medium text-emerald-600 mr-0.5">Masuk:</span>
+                  <span class="font-bold">+${utils.formatRupiah(totalIn)}</span>
+                </div>
+                <div class="px-2 py-0.5 rounded-lg bg-rose-50/80 border border-rose-100 text-rose-700">
+                  <span class="font-sans font-medium text-rose-600 mr-0.5">Keluar:</span>
+                  <span class="font-bold">-${utils.formatRupiah(totalOut)}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Mutasi Rekening (4 Kolom Mobile Friendly: Tanggal, Keterangan, Dompet, Nominal) -->
+            <div class="overflow-x-auto custom-scrollbar">
+              <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr class="bg-slate-50/70 text-slate-500 font-semibold uppercase tracking-wider text-[10px] border-b border-slate-100">
+                    <th class="py-2.5 px-3 sm:px-4 w-20 sm:w-24 whitespace-nowrap">Tanggal</th>
+                    <th class="py-2.5 px-2 sm:px-4">Keterangan</th>
+                    <th class="py-2.5 px-2 sm:px-3 whitespace-nowrap">Dompet</th>
+                    <th class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap">Nominal</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${rowsHTML}
+                </tbody>
+              </table>
+            </div>
+            ${footerHTML}
           </div>
         `;
       }
