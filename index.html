@@ -397,33 +397,12 @@
                 </div>
 
                 <div>
-                  <div class="flex items-center justify-between mb-1.5">
-                    <label for="tx-amount" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nominal Transaksi (Rp)</label>
-                    <span class="text-[10px] text-sky-600 font-semibold bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 flex items-center gap-1">
-                      <svg class="w-3 h-3 text-sky-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                      Otomatis Koma (cth: 100k)
-                    </span>
-                  </div>
+                  <label for="tx-amount" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nominal Transaksi (Rp)</label>
                   <div class="relative">
                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-sky-700 font-mono">Rp</span>
-                    <input type="text" inputmode="numeric" id="tx-amount" placeholder="Contoh: 100,000 (ketik 100k)" required
+                    <input type="text" inputmode="numeric" id="tx-amount" placeholder="" required
                       class="w-full bg-slate-50/80 border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder:font-normal placeholder-slate-400 font-mono">
                   </div>
-
-                  <div class="flex flex-wrap items-center gap-1.5 mt-2">
-                    <span class="text-[10px] font-semibold text-slate-400 mr-0.5">Cepat:</span>
-                    <button type="button" onclick="ui.setQuickAmount(10000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+10k</button>
-                    <button type="button" onclick="ui.setQuickAmount(20000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+20k</button>
-                    <button type="button" onclick="ui.setQuickAmount(50000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+50k</button>
-                    <button type="button" onclick="ui.setQuickAmount(100000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+100k</button>
-                    <button type="button" onclick="ui.setQuickAmount(200000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+200k</button>
-                    <button type="button" onclick="ui.setQuickAmount(500000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+500k</button>
-                    <button type="button" onclick="ui.setQuickAmount(1000000)" class="px-2.5 py-1 text-[11px] font-mono font-semibold text-slate-600 bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 rounded-lg transition active:scale-95 cursor-pointer">+1jt</button>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-1.5 flex items-center gap-1">
-                    <span>💡</span>
-                    <span>Otomatis beri koma ribuan. Ketik langsung <b>100k</b> jadi <b>100,000</b> atau <b>1jt</b> jadi <b>1,000,000</b>.</span>
-                  </p>
                 </div>
 
                 <div>
@@ -440,7 +419,7 @@
 
                 <div>
                   <label for="tx-desc" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Keterangan / Deskripsi</label>
-                  <input type="text" id="tx-desc" placeholder="Contoh: Makanan, Bensin, dll" required
+                  <input type="text" id="tx-desc" placeholder="" required
                     class="w-full bg-slate-50/80 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400">
                 </div>
 
@@ -491,7 +470,6 @@
           </div>
           <div>
             <h3 id="modal-wallet-title" class="font-bold text-slate-900 text-base">Kelola Rekening & Akun</h3>
-            <p class="text-slate-500 text-xs font-medium">Konfigurasi akun saldo dan ambang batas limit opsional.</p>
           </div>
         </div>
         <button onclick="ui.toggleModalWallet(false)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition cursor-pointer">
@@ -504,41 +482,32 @@
 
         <div>
           <label for="wallet-name" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nama Rekening / Akun</label>
-          <input type="text" id="wallet-name" placeholder="Contoh: Operasional Kantor, Tabungan Haji" required
+          <input type="text" id="wallet-name" placeholder="" required
             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400">
         </div>
 
         <div>
           <label for="wallet-budget" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Saldo Awal (Rp)</label>
-          <input type="text" inputmode="numeric" id="wallet-budget" placeholder="0 (contoh: 1,000,000 atau 1jt)"
+          <input type="text" inputmode="numeric" id="wallet-budget" placeholder=""
             class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400 font-mono">
         </div>
 
         <div class="pt-3 border-t border-slate-100">
-          <div class="mb-2.5">
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-3.5 bg-sky-600 rounded-full"></span>
-              <span class="text-xs font-bold text-slate-800">Pengaturan Ambang Batas Limit</span>
-            </div>
-            <p class="text-[11px] text-slate-400 ml-3">Input di bawah ini bersifat opsional. Kosongkan jika tidak ingin membatasi pengeluaran akun ini.</p>
+          <div class="mb-2.5 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 bg-sky-600 rounded-full"></span>
+            <span class="text-xs font-bold text-slate-800">Pengaturan Ambang Batas Limit</span>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label for="wallet-max-limit" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Limit Mingguan (Rp)</label>
-                <span class="text-[10px] text-sky-600 font-medium bg-sky-50 px-1.5 py-0.2 rounded">Opsional</span>
-              </div>
-              <input type="text" inputmode="numeric" id="wallet-max-limit" placeholder="Kosongkan jika bebas (cth: 500k)"
+              <label for="wallet-max-limit" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Limit Mingguan (Rp)</label>
+              <input type="text" inputmode="numeric" id="wallet-max-limit" placeholder=""
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400 font-mono">
             </div>
 
             <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label for="wallet-monthly-limit" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Limit Bulanan (Rp)</label>
-                <span class="text-[10px] text-sky-600 font-medium bg-sky-50 px-1.5 py-0.2 rounded">Opsional</span>
-              </div>
-              <input type="text" inputmode="numeric" id="wallet-monthly-limit" placeholder="Kosongkan jika bebas (cth: 2jt)"
+              <label for="wallet-monthly-limit" class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Limit Bulanan (Rp)</label>
+              <input type="text" inputmode="numeric" id="wallet-monthly-limit" placeholder=""
                 class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400 font-mono">
             </div>
           </div>
@@ -574,7 +543,6 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-900 text-base">Kelola Kategori Deskripsi</h3>
-            <p class="text-xs text-slate-500">Ubah atau tambah pilihan cepat deskripsi transaksi.</p>
           </div>
         </div>
         <button type="button" onclick="ui.toggleModalCategory(false)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition cursor-pointer">
@@ -586,7 +554,7 @@
         <div>
           <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Tambah Kategori Baru</label>
           <div class="flex gap-2">
-            <input type="text" id="new-category-name" placeholder="Contoh: Belanja, Pulsa, Skincare, dll"
+            <input type="text" id="new-category-name" placeholder=""
               class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:bg-white transition placeholder-slate-400">
             <button type="button" onclick="app.addCategory(document.getElementById('new-category-name').value)"
               class="px-4 py-2 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-semibold rounded-xl transition shadow-xs flex items-center gap-1 cursor-pointer">
