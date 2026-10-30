@@ -1,12 +1,8 @@
 const ui = {
-  // Flag to manage notification dropdown
   isNotificationOpen: false,
-
-  // State untuk filter tab dompet pada riwayat transaksi
   selectedTxWalletTab: 'all',
 
   init() {
-    // Menutup dropdown notifikasi ketika mengklik di luar area
     document.addEventListener('click', (e) => {
       const bellBtnDesktop = document.getElementById('notif-bell-desktop');
       const bellBtnMobile = document.getElementById('notif-bell-mobile');
@@ -23,23 +19,23 @@ const ui = {
       }
     });
 
-    // Event listener untuk tombol ESC menutup modal dan dropdown
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         this.toggleNotification(false);
         this.toggleModalWallet(false);
+        this.toggleModalCategory(false);
       }
     });
 
-    // Inisialisasi otomatis pemisah ribuan koma dan shorthand pada semua input nominal
     const currencyIds = ['tx-amount', 'wallet-budget', 'wallet-max-limit', 'wallet-monthly-limit'];
     currencyIds.forEach(id => {
       const el = document.getElementById(id);
       if (el) utils.setupCurrencyInput(el);
     });
+
+    this.renderCategories();
   },
 
-  // Helper untuk menambahkan / memilih nominal cepat dengan format koma
   setQuickAmount(amount) {
     const input = document.getElementById('tx-amount');
     if (!input) return;
@@ -50,23 +46,18 @@ const ui = {
     input.focus();
   },
 
-
-  // Tab Management
   switchTab(tabId) {
-    // Sembunyikan semua tab content
     document.querySelectorAll('.tab-content').forEach(tab => {
       tab.classList.remove('active');
       tab.classList.add('hidden');
     });
     
-    // Tampilkan tab yang dipilih
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) {
       targetTab.classList.remove('hidden');
       targetTab.classList.add('active');
     }
 
-    // Reset Desktop Sidebar
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.remove('active-nav');
     });
@@ -75,7 +66,6 @@ const ui = {
       activeSidebar.classList.add('active-nav');
     }
 
-    // Reset Mobile Bottom Nav
     document.querySelectorAll('.bottom-nav-btn').forEach(btn => {
       btn.classList.remove('active-bnav');
     });
@@ -84,17 +74,14 @@ const ui = {
       activeBottomNav.classList.add('active-bnav');
     }
 
-    // Render ulang charts jika berpindah ke analitik
     if (tabId === 'analytics') {
       analytics.renderCharts();
     }
 
-    // Render tabel transaksi jika berpindah ke tab riwayat
     if (tabId === 'transactions') {
       this.renderTransactions();
     }
 
-    // Scroll ke atas dengan halus
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
@@ -162,6 +149,69 @@ const ui = {
     }
   },
 
+  toggleModalCategory(forceState) {
+    const modal = document.getElementById('modal-category');
+    if (!modal) return;
+    
+    if (typeof forceState === 'boolean') {
+      if (forceState) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+      }
+    } else {
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+  },
+
+  renderCategories() {
+    const selectEl = document.getElementById('tx-category-select');
+    if (selectEl) {
+      const currentVal = selectEl.value;
+      let optionsHTML = '<option value="" disabled selected>-- Pilih Kategori / Deskripsi --</option>';
+      state.categories.forEach(cat => {
+        optionsHTML += `<option value="${cat}">${cat}</option>`;
+      });
+      optionsHTML += '<option value="__manage__">+ Kelola / Tambah Kategori...</option>';
+      selectEl.innerHTML = optionsHTML;
+      if (currentVal && state.categories.includes(currentVal)) {
+        selectEl.value = currentVal;
+      }
+    }
+
+    const listEl = document.getElementById('category-manager-list');
+    if (listEl) {
+      if (state.categories.length === 0) {
+        listEl.innerHTML = '<p class="text-xs text-slate-400 py-3 text-center">Belum ada kategori yang ditambahkan.</p>';
+      } else {
+        listEl.innerHTML = state.categories.map(c => `
+          <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200/70 rounded-xl">
+            <span class="text-xs font-semibold text-slate-800">${c}</span>
+            <button type="button" onclick="app.deleteCategory('${c}')" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 inline-flex items-center justify-center transition" title="Hapus Kategori">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `).join('');
+      }
+    }
+  },
+
+  onCategorySelectChange(val) {
+    if (val === '__manage__') {
+      this.toggleModalCategory(true);
+      const selectEl = document.getElementById('tx-category-select');
+      if (selectEl) selectEl.value = '';
+      return;
+    }
+    const descInput = document.getElementById('tx-desc');
+    if (descInput) {
+      descInput.value = val;
+    }
+  },
+
   resetWalletForm() {
     document.getElementById('wallet-edit-id').value = '';
     document.getElementById('wallet-name').value = '';
@@ -171,7 +221,6 @@ const ui = {
     document.getElementById('modal-wallet-title').innerText = 'Tambah Rekening / Akun';
   },
 
-  // Toggle Dropdown Notifikasi Limit
   toggleNotification(forceState) {
     const popover = document.getElementById('notif-dropdown');
     if (!popover) return;
@@ -189,7 +238,6 @@ const ui = {
     }
   },
 
-  // Render detail peringatan limit di dalam popover
   renderNotifications() {
     const listEl = document.getElementById('notif-list');
     const badgeDesktop = document.getElementById('notif-badge-desktop');
@@ -200,7 +248,6 @@ const ui = {
     const notifs = state.notifications || [];
     const count = notifs.length;
 
-    // Tampilkan/sembunyikan red dot (badge)
     if (count > 0) {
       if (badgeDesktop) badgeDesktop.classList.remove('hidden');
       if (badgeMobile) badgeMobile.classList.remove('hidden');
@@ -305,7 +352,6 @@ const ui = {
     let totalNetBalance = 0;
     state.wallets.forEach(w => totalNetBalance += Number(w.budget || 0));
 
-    // Summary Bulanan Berdasarkan Filter
     let sumIncome = 0;
     let sumExpense = 0;
 
@@ -324,18 +370,15 @@ const ui = {
           totalNetBalance -= amount;
           if (isSelectedMonth) sumExpense += amount;
 
-          // Peringatan menggunakan waktu riil (minggu berjalan & bulan kalender berjalan)
           if (utils.isWithinCurrentWeek(tx.fullDate)) walletStats[tx.walletId].weeklySpent += amount;
           if (utils.isWithinCurrentMonth(tx.fullDate)) walletStats[tx.walletId].monthlySpent += amount;
         }
       }
     });
 
-    // Perbarui teks total saldo
     const totalSaldoEl = document.getElementById('total-saldo');
     if (totalSaldoEl) totalSaldoEl.innerText = utils.formatRupiah(totalNetBalance);
     
-    // Perbarui statistik KPI
     const incEl = document.getElementById('summary-income');
     const expEl = document.getElementById('summary-expense');
     const netEl = document.getElementById('summary-net');
@@ -343,7 +386,6 @@ const ui = {
     if (expEl) expEl.innerText = utils.formatRupiah(sumExpense);
     if (netEl) netEl.innerText = utils.formatRupiah(sumIncome - sumExpense);
 
-    // Kumpulkan peringatan limit ke state.notifications
     state.notifications = [];
 
     const walletListEl = document.getElementById('wallet-list');
@@ -361,7 +403,6 @@ const ui = {
       const percentWeekly = hasWeeklyLimit ? Math.round((stats.weeklySpent / maxLimit) * 100) : 0;
       const percentMonthly = hasMonthlyLimit ? Math.round((stats.monthlySpent / monthlyLimit) * 100) : 0;
 
-      // Peringatan Mingguan (jika limit diset dan >= 80%)
       if (hasWeeklyLimit && percentWeekly >= 80) {
         state.notifications.push({
           type: 'weekly',
@@ -374,7 +415,6 @@ const ui = {
         });
       }
 
-      // Peringatan Bulanan (jika limit diset dan >= 80%)
       if (hasMonthlyLimit && percentMonthly >= 80) {
         state.notifications.push({
           type: 'monthly',
@@ -387,7 +427,6 @@ const ui = {
         });
       }
 
-      // Render Kartu Akun / Dompet
       if (walletListEl) {
         const hexColor = w.hex || '#0284c7';
         const progressPercent = hasMonthlyLimit ? Math.min(percentMonthly, 100) : 0;
@@ -449,7 +488,6 @@ const ui = {
       }
     });
 
-    // Perbarui dropdown notifikasi dan indikator lonceng
     this.renderNotifications();
 
     const selectEl = document.getElementById('tx-wallet');
@@ -457,10 +495,10 @@ const ui = {
       selectEl.innerHTML = state.wallets.map(w => `<option value="${w.id}">${w.name}</option>`).join('');
     }
 
+    this.renderCategories();
     this.renderTransactions();
     this.renderModalWalletList();
     
-    // Auto switch to Dashboard jika belum ada tab aktif
     if (!document.querySelector('.tab-content.active')) {
       this.switchTab('dashboard');
     }
@@ -471,8 +509,7 @@ const ui = {
     const recentListEl = document.getElementById('recent-tx-list');
     const filterTabsContainer = document.getElementById('tx-wallet-filter-tabs');
     
-    // 1. Hitung Running Balance per Dompet secara kronologis (dari awal waktu)
-    const runningBalanceMap = new Map(); // realIndex -> balanceAfterTx
+    const runningBalanceMap = new Map();
     const walletFinalBalances = {};
 
     state.wallets.forEach(wallet => {
@@ -496,7 +533,6 @@ const ui = {
       walletFinalBalances[wallet.id] = currentBal;
     });
 
-    // 2. Ambil transaksi yang sesuai dengan filter bulan dan tahun terpilih (diurutkan terbaru ke terlama)
     const allFilteredTxs = state.transactions
       .map((tx, idx) => ({ ...tx, realIndex: idx }))
       .filter(tx => {
@@ -509,7 +545,6 @@ const ui = {
         return (timeB - timeA) || (b.realIndex - a.realIndex);
       });
 
-    // Generator template Tabel Mutasi per Rekening (Buku Pembukuan Bank)
     const buildWalletMutationTable = (wallet, txList, isCompact = false) => {
       let income = 0;
       let expense = 0;
@@ -522,7 +557,7 @@ const ui = {
       const finalBal = walletFinalBalances[wallet.id] ?? Number(wallet.budget || 0);
 
       if (txList.length === 0) {
-        if (isCompact) return ''; // Lewati dompet kosong pada preview dashboard
+        if (isCompact) return '';
         return `
           <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-5">
             <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
@@ -546,8 +581,6 @@ const ui = {
 
       return `
         <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden mb-5 transition-all hover:border-slate-300">
-          
-          <!-- Header Mutasi Dompet -->
           <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
             <div class="flex items-center gap-2.5 sm:gap-3">
               <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs flex-shrink-0" style="background-color: ${hex}18; color: ${hex}; border: 1px solid ${hex}30;">
@@ -564,7 +597,6 @@ const ui = {
               </div>
             </div>
 
-            <!-- Ringkasan Arus Kas Dompet (Kredit, Debit) -->
             <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
               <div class="px-2 py-0.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
                 <span class="font-sans font-medium text-emerald-600 mr-0.5">Masuk:</span>
@@ -577,7 +609,6 @@ const ui = {
             </div>
           </div>
 
-          <!-- Tabel Mutasi Rekening (4 Kolom Mobile Friendly: Tanggal, Keterangan, Dompet, Nominal) -->
           <div class="overflow-x-auto custom-scrollbar">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
@@ -593,34 +624,27 @@ const ui = {
                   const isIncome = tx.type === 'in';
                   return `
                     <tr class="hover:bg-sky-50/30 transition-colors group">
-                      <!-- 1. Tanggal -->
                       <td class="py-2.5 px-3 sm:px-4 text-slate-500 font-medium whitespace-nowrap text-[11px] sm:text-xs">
                         ${tx.date}
                       </td>
-
-                      <!-- 2. Keterangan -->
                       <td class="py-2.5 px-2 sm:px-4 text-slate-900 font-semibold text-xs min-w-0">
                         <div class="flex items-center gap-1.5 min-w-0">
                           <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
                           <span class="truncate block max-w-[120px] sm:max-w-xs" title="${tx.desc}">${tx.desc}</span>
                         </div>
                       </td>
-
-                      <!-- 3. Nama Dompet -->
                       <td class="py-2.5 px-2 sm:px-3 whitespace-nowrap text-[10px] sm:text-xs">
                         <span class="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/60 max-w-[95px] sm:max-w-none truncate">
                           <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${hex};"></span>
                           <span class="truncate">${wallet.name}</span>
                         </span>
                       </td>
-
-                      <!-- 4. Nominal (Disatukan Masuk/Keluar + Hapus) -->
                       <td class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap font-mono text-xs">
                         <div class="inline-flex items-center gap-1.5 justify-end">
                           <span class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
                             ${isIncome ? '+' : '-'} ${utils.formatRupiah(tx.amount)}
                           </span>
-                          <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-5 h-5 rounded hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition opacity-60 group-hover:opacity-100" title="Hapus Transaksi">
+                          <button onclick="app.deleteTransaction(${tx.realIndex})" class="w-5 h-5 rounded hover:bg-rose-50 text-slate-300 hover:text-rose-600 inline-flex items-center justify-center transition opacity-60 group-hover:opacity-100 cursor-pointer" title="Hapus Transaksi">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                           </button>
                         </div>
@@ -635,7 +659,6 @@ const ui = {
       `;
     };
 
-    // 3. Render di Dashboard: History Mutasi Rekening Terurut Transaksi Terakhir (Tidak disendirikan per dompet)
     if (recentListEl) {
       if (allFilteredTxs.length === 0) {
         recentListEl.innerHTML = `
@@ -661,28 +684,21 @@ const ui = {
 
           return `
             <tr class="hover:bg-sky-50/30 transition-colors group">
-              <!-- 1. Tanggal -->
               <td class="py-2.5 px-3 sm:px-4 text-slate-500 font-medium whitespace-nowrap text-[11px] sm:text-xs">
                 ${tx.date}
               </td>
-
-              <!-- 2. Keterangan -->
               <td class="py-2.5 px-2 sm:px-4 text-slate-900 font-semibold text-xs min-w-0">
                 <div class="flex items-center gap-1.5 min-w-0">
                   <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
                   <span class="truncate block max-w-[120px] sm:max-w-xs" title="${tx.desc}">${tx.desc}</span>
                 </div>
               </td>
-
-              <!-- 3. Nama Dompet -->
               <td class="py-2.5 px-2 sm:px-3 whitespace-nowrap text-[10px] sm:text-xs">
                 <span class="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200/60 max-w-[95px] sm:max-w-none truncate">
                   <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background-color: ${hex};"></span>
                   <span class="truncate">${wallet.name}</span>
                 </span>
               </td>
-
-              <!-- 4. Nominal (Disatukan Masuk/Keluar + Hapus) -->
               <td class="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap font-mono text-xs">
                 <div class="inline-flex items-center gap-1.5 justify-end">
                   <span class="font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}">
@@ -709,7 +725,6 @@ const ui = {
 
         recentListEl.innerHTML = `
           <div class="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-slate-300">
-            <!-- Header Mutasi Gabungan Terkini -->
             <div class="px-4 py-3 sm:px-5 sm:py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div class="flex items-center gap-2.5 sm:gap-3">
                 <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center font-bold text-xs sm:text-sm shadow-xs flex-shrink-0 bg-sky-50 text-sky-700 border border-sky-100">
@@ -726,7 +741,6 @@ const ui = {
                 </div>
               </div>
 
-              <!-- Ringkasan Arus Kas Mutasi Terkini -->
               <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono">
                 <div class="px-2 py-0.5 rounded-lg bg-emerald-50/80 border border-emerald-100 text-emerald-700">
                   <span class="font-sans font-medium text-emerald-600 mr-0.5">Masuk:</span>
@@ -739,7 +753,6 @@ const ui = {
               </div>
             </div>
 
-            <!-- Tabel Mutasi Rekening (4 Kolom Mobile Friendly: Tanggal, Keterangan, Dompet, Nominal) -->
             <div class="overflow-x-auto custom-scrollbar">
               <table class="w-full text-left border-collapse text-xs">
                 <thead>
@@ -763,7 +776,6 @@ const ui = {
 
     if (!listEl) return;
 
-    // 4. Render Tab Filter Dompet untuk Halaman Mutasi
     if (filterTabsContainer) {
       const activeAll = this.selectedTxWalletTab === 'all' 
         ? 'bg-sky-600 text-white shadow-xs font-semibold' 
@@ -796,7 +808,6 @@ const ui = {
       filterTabsContainer.innerHTML = filterBtnsHTML;
     }
 
-    // 5. Tampilkan Tabel Mutasi Sendiri-Sendiri per Dompet di Tab Mutasi
     const targetWallets = this.selectedTxWalletTab === 'all' 
       ? state.wallets 
       : state.wallets.filter(w => w.id === this.selectedTxWalletTab);

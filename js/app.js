@@ -23,7 +23,10 @@ const app = {
     e.preventDefault();
     const walletId = document.getElementById('tx-wallet').value;
     const amountVal = document.getElementById('tx-amount').value;
-    const descVal = document.getElementById('tx-desc').value.trim();
+    const catSelect = document.getElementById('tx-category-select');
+    const categoryVal = catSelect ? catSelect.value : '';
+    const descInput = document.getElementById('tx-desc');
+    const descVal = descInput ? descInput.value.trim() : '';
 
     if (!walletId) {
       alert('Silakan pilih atau buat dompet terlebih dahulu.');
@@ -36,11 +39,15 @@ const app = {
       return;
     }
 
+    const finalCategory = categoryVal || descVal || 'Lainnya';
+    const finalDesc = descVal || categoryVal || (state.currentTxType === 'in' ? 'Pemasukan' : 'Pengeluaran');
+
     const now = new Date();
     const newTx = {
       walletId,
       amount,
-      desc: descVal || (state.currentTxType === 'in' ? 'Pemasukan' : 'Pengeluaran'),
+      category: finalCategory,
+      desc: finalDesc,
       type: state.currentTxType,
       date: now.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
       fullDate: now.toISOString()
@@ -50,8 +57,10 @@ const app = {
     state.saveData();
 
     document.getElementById('tx-amount').value = '';
-    document.getElementById('tx-desc').value = '';
+    if (descInput) descInput.value = '';
+    if (catSelect) catSelect.value = '';
 
+    ui.closeModal('modal-transaction');
     this.renderAll();
     ui.switchTab('dashboard');
   },
@@ -64,13 +73,41 @@ const app = {
     }
   },
 
+  addCategory(name) {
+    name = (name || '').trim();
+    if (!name) {
+      alert('Nama kategori tidak boleh kosong.');
+      return;
+    }
+    if (state.categories.some(c => c.toLowerCase() === name.toLowerCase())) {
+      alert('Kategori tersebut sudah ada.');
+      return;
+    }
+    state.categories.push(name);
+    state.saveData();
+    ui.renderCategories();
+    const catInput = document.getElementById('new-category-name');
+    if (catInput) catInput.value = '';
+  },
+
+  deleteCategory(catName) {
+    if (state.categories.length <= 1) {
+      alert('Minimal harus ada 1 kategori.');
+      return;
+    }
+    if (confirm(`Hapus kategori "${catName}"?`)) {
+      state.categories = state.categories.filter(c => c !== catName);
+      state.saveData();
+      ui.renderCategories();
+    }
+  },
+
   saveWallet(e) {
     e.preventDefault();
     const editId = document.getElementById('wallet-edit-id').value;
     const name = document.getElementById('wallet-name').value.trim();
     const budget = utils.parseNumber(document.getElementById('wallet-budget').value) || 0;
     
-    // Limit mingguan & bulanan kini opsional (0 = tanpa limit)
     const maxLimitVal = document.getElementById('wallet-max-limit').value.trim();
     const monthlyLimitVal = document.getElementById('wallet-monthly-limit').value.trim();
     const maxLimit = maxLimitVal !== '' ? Math.max(0, utils.parseNumber(maxLimitVal)) : 0;
@@ -105,7 +142,7 @@ const app = {
 
     state.saveData();
     ui.resetWalletForm();
-    ui.toggleModalWallet(false); // Tutup modal otomatis saat save
+    ui.toggleModalWallet(false);
     this.renderAll();
   },
 
@@ -137,7 +174,7 @@ const app = {
   },
 
   exportData() {
-    const backupData = { wallets: state.wallets, transactions: state.transactions, exportDate: new Date().toISOString() };
+    const backupData = { wallets: state.wallets, categories: state.categories, transactions: state.transactions, exportDate: new Date().toISOString() };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
@@ -157,6 +194,9 @@ const app = {
         const parsed = JSON.parse(e.target.result);
         if (parsed.wallets && Array.isArray(parsed.wallets) && parsed.transactions && Array.isArray(parsed.transactions)) {
           state.wallets = parsed.wallets;
+          if (parsed.categories && Array.isArray(parsed.categories)) {
+            state.categories = parsed.categories;
+          }
           state.transactions = parsed.transactions;
           state.saveData();
           app.renderAll();
@@ -169,11 +209,10 @@ const app = {
       }
     };
     reader.readAsText(file);
-    event.target.value = ''; // Reset input
+    event.target.value = '';
   }
 };
 
-// Initialize App ketika DOM selesai diload
 document.addEventListener('DOMContentLoaded', () => {
   app.init();
 });

@@ -1,8 +1,3 @@
-/**
- * Ambient Crystal Snowflake Animation (Frozen Ice Crystals)
- * Generates high-definition 6-fold radial symmetry ice crystals
- * inspired by intricate crystalline snowflake structures.
- */
 const snow = {
   canvas: null,
   ctx: null,
@@ -12,9 +7,7 @@ const snow = {
   animId: null,
   isActive: true,
 
-  // Color palettes inspired by Frozen ice crystals (light cyan, deep ice blue, electric azure)
   palettes: [
-    // 1. Frozen Elsa / Iconic Crystal Ice (Exact match to reference image)
     {
       stroke: '#0284c7',
       facetFill: 'rgba(56, 189, 248, 0.65)',
@@ -24,7 +17,6 @@ const snow = {
       glow: 'rgba(56, 189, 248, 0.85)',
       coreFill: 'rgba(186, 230, 253, 0.9)'
     },
-    // 2. Electric Sky Cyan (Vibrant light cyan)
     {
       stroke: '#0369a1',
       facetFill: 'rgba(125, 211, 252, 0.70)',
@@ -34,7 +26,6 @@ const snow = {
       glow: 'rgba(14, 165, 233, 0.90)',
       coreFill: 'rgba(224, 242, 254, 0.95)'
     },
-    // 3. Aqua Turquoise Ice (Mint / Sea Ice)
     {
       stroke: '#0e7490',
       facetFill: 'rgba(103, 232, 249, 0.65)',
@@ -44,7 +35,6 @@ const snow = {
       glow: 'rgba(6, 182, 212, 0.85)',
       coreFill: 'rgba(207, 250, 254, 0.92)'
     },
-    // 4. Royal Glacier Azure (Deep crystal blue)
     {
       stroke: '#1d4ed8',
       facetFill: 'rgba(96, 165, 250, 0.65)',
@@ -54,7 +44,6 @@ const snow = {
       glow: 'rgba(59, 130, 246, 0.85)',
       coreFill: 'rgba(219, 234, 254, 0.9)'
     },
-    // 5. Luminous Frosted Diamond (Bright ice white & sky blue glow)
     {
       stroke: '#0284c7',
       facetFill: 'rgba(224, 242, 254, 0.80)',
@@ -71,7 +60,6 @@ const snow = {
     if (!this.canvas) return;
     this.ctx = this.canvas.getContext('2d');
 
-    // Sesuaikan jumlah partikel berdasarkan ukuran layar (ringan di mobile)
     this.maxFlakes = window.innerWidth < 768 ? 32 : 60;
 
     this.resize();
@@ -80,10 +68,8 @@ const snow = {
       this.maxFlakes = window.innerWidth < 768 ? 32 : 60;
     });
 
-    // Buat sprite kristal salju resolusi tinggi (pre-rendered untuk performa maksimal 60fps)
     this.generateSprites();
 
-    // Inisialisasi butiran kristal salju
     this.flakes = [];
     for (let i = 0; i < this.maxFlakes; i++) {
       this.flakes.push(this.createFlake(true));
@@ -98,15 +84,9 @@ const snow = {
     this.canvas.height = window.innerHeight;
   },
 
-  /**
-   * Pre-render variasi kristal salju ke off-screen canvas.
-   * Menggambar bentuk kristal segi enam (6-fold radial symmetry) lengkap dengan ujung tombak berlian,
-   * sayap kristal lateral, berkas sekunder 12-titik, dan inti bercahaya persis seperti gambar referensi.
-   */
   generateSprites() {
     this.sprites = [];
-    this.palettes.forEach((palette, pIdx) => {
-      // 2 variasi gaya untuk setiap palet (styler berlian lancip & kristal lebat)
+    this.palettes.forEach((palette) => {
       this.sprites.push(this.drawSnowflakeCanvas(palette, 1));
       this.sprites.push(this.drawSnowflakeCanvas(palette, 2));
     });
@@ -114,30 +94,25 @@ const snow = {
 
   drawSnowflakeCanvas(palette, styleVariant) {
     const sCanvas = document.createElement('canvas');
-    const size = 160; // Kanvas sprite beresolusi tinggi (160x160)
+    const size = 160;
     sCanvas.width = size;
     sCanvas.height = size;
     const sCtx = sCanvas.getContext('2d');
     const cx = size / 2;
     const cy = size / 2;
-    const R = 64; // Jari-jari maksimum kristal
+    const R = 64;
 
     sCtx.lineCap = 'round';
     sCtx.lineJoin = 'round';
 
-    // Efek aura kristal bercahaya (glowing ice aura)
     sCtx.shadowColor = palette.glow;
     sCtx.shadowBlur = 6;
 
-    // ==========================================
-    // 1. Gambar 6 Lengan Utama (6-Fold Radial Symmetry)
-    // ==========================================
     for (let arm = 0; arm < 6; arm++) {
       sCtx.save();
       sCtx.translate(cx, cy);
       sCtx.rotate((arm * Math.PI) / 3);
 
-      // Tulang Punggung Lengan (Spine kristal)
       sCtx.beginPath();
       sCtx.moveTo(0, 0);
       sCtx.lineTo(0, -R);
@@ -145,12 +120,11 @@ const snow = {
       sCtx.lineWidth = 1.6;
       sCtx.stroke();
 
-      // --- Ujung Tombak Berlian Kristal (Spearhead Diamond Tip) ---
       sCtx.beginPath();
-      sCtx.moveTo(0, -R); // Puncak terluar
-      sCtx.lineTo(R * 0.11, -R * 0.82); // Sudut kanan
-      sCtx.lineTo(0, -R * 0.65); // Sudut bawah
-      sCtx.lineTo(-R * 0.11, -R * 0.82); // Sudut kiri
+      sCtx.moveTo(0, -R);
+      sCtx.lineTo(R * 0.11, -R * 0.82);
+      sCtx.lineTo(0, -R * 0.65);
+      sCtx.lineTo(-R * 0.11, -R * 0.82);
       sCtx.closePath();
       sCtx.fillStyle = palette.facetFill;
       sCtx.fill();
@@ -158,7 +132,6 @@ const snow = {
       sCtx.lineWidth = 1.3;
       sCtx.stroke();
 
-      // Garis kilau dalam pada ujung tombak
       sCtx.beginPath();
       sCtx.moveTo(0, -R);
       sCtx.lineTo(0, -R * 0.65);
@@ -166,15 +139,12 @@ const snow = {
       sCtx.lineWidth = 1;
       sCtx.stroke();
 
-      // --- Sayap Kristal Luar (Outer Chevron Wings) ---
       this.drawCrystalWing(sCtx, 0, -R * 0.63, R * 0.38, Math.PI / 5.2, palette);
       this.drawCrystalWing(sCtx, 0, -R * 0.63, R * 0.38, -Math.PI / 5.2, palette);
 
-      // --- Sayap Kristal Tengah (Mid Chevron Wings) ---
       this.drawCrystalWing(sCtx, 0, -R * 0.44, R * 0.32, Math.PI / 4.8, palette);
       this.drawCrystalWing(sCtx, 0, -R * 0.44, R * 0.32, -Math.PI / 4.8, palette);
 
-      // --- Faset Belah Ketupat Tengah (Mid Rhombus Facet) ---
       sCtx.beginPath();
       sCtx.moveTo(0, -R * 0.44);
       sCtx.lineTo(R * 0.085, -R * 0.33);
@@ -187,16 +157,12 @@ const snow = {
       sCtx.lineWidth = 1.1;
       sCtx.stroke();
 
-      // --- Sayap Kristal Pangkal (Inner Spurs) ---
       this.drawCrystalSpur(sCtx, 0, -R * 0.22, R * 0.18, Math.PI / 4.2, palette);
       this.drawCrystalSpur(sCtx, 0, -R * 0.22, R * 0.18, -Math.PI / 4.2, palette);
 
       sCtx.restore();
     }
 
-    // ==========================================
-    // 2. Berkas Kristal Sekunder Antar Lengan (12-Point Layered Depth)
-    // ==========================================
     for (let arm = 0; arm < 6; arm++) {
       sCtx.save();
       sCtx.translate(cx, cy);
@@ -204,7 +170,6 @@ const snow = {
 
       const rSec = styleVariant === 1 ? R * 0.48 : R * 0.42;
 
-      // Tombak berlian kecil di antara tiap lengan utama
       sCtx.beginPath();
       sCtx.moveTo(0, -rSec);
       sCtx.lineTo(R * 0.065, -rSec * 0.65);
@@ -217,7 +182,6 @@ const snow = {
       sCtx.lineWidth = 1;
       sCtx.stroke();
 
-      // Garis poros
       sCtx.beginPath();
       sCtx.moveTo(0, 0);
       sCtx.lineTo(0, -rSec);
@@ -228,13 +192,9 @@ const snow = {
       sCtx.restore();
     }
 
-    // ==========================================
-    // 3. Inti Bintang Faset Kristal (Central Multifaceted Core)
-    // ==========================================
     sCtx.save();
     sCtx.translate(cx, cy);
 
-    // Faset Bintang Heksagonal Inti
     sCtx.beginPath();
     for (let i = 0; i < 12; i++) {
       const angle = (i * Math.PI) / 6;
@@ -251,7 +211,6 @@ const snow = {
     sCtx.lineWidth = 1.3;
     sCtx.stroke();
 
-    // Kilau Inti Pusat (Glowing Radial Center)
     const grad = sCtx.createRadialGradient(0, 0, 1, 0, 0, R * 0.14);
     grad.addColorStop(0, '#ffffff');
     grad.addColorStop(0.35, palette.light);
@@ -285,7 +244,6 @@ const snow = {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Tulang sayap
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(0, -length);
@@ -321,18 +279,16 @@ const snow = {
     const width = this.canvas ? this.canvas.width : window.innerWidth;
     const height = this.canvas ? this.canvas.height : window.innerHeight;
 
-    // Ukuran kristal: kecil-kecil yang banyak (13px - 22px), sebagian sedang (23px - 30px), sedikit yang besar (32px - 38px)
     const rand = Math.random();
     let size;
     if (rand < 0.55) {
-      size = Math.random() * 8 + 13; // Kecil 13px - 21px
+      size = Math.random() * 8 + 13;
     } else if (rand < 0.85) {
-      size = Math.random() * 8 + 22; // Sedang 22px - 30px
+      size = Math.random() * 8 + 22;
     } else {
-      size = Math.random() * 8 + 31; // Besar & detail 31px - 39px
+      size = Math.random() * 8 + 31;
     }
 
-    // Pilih secara acak salah satu sprite kristal es beresolusi tinggi
     const sprite = this.sprites[Math.floor(Math.random() * this.sprites.length)];
 
     return {
@@ -340,13 +296,13 @@ const snow = {
       y: randomY ? Math.random() * height : -size - 10,
       size: size,
       sprite: sprite,
-      speedY: Math.random() * 0.8 + 0.45, // Kecepatan melayang turun dengan anggun
-      speedX: Math.random() * 0.5 - 0.25, // Sedikit hembusan horizontal
-      swing: Math.random() * Math.PI * 2, // Sudut ayunan melayang
+      speedY: Math.random() * 0.8 + 0.45,
+      speedX: Math.random() * 0.5 - 0.25,
+      swing: Math.random() * Math.PI * 2,
       swingSpeed: Math.random() * 0.02 + 0.008,
-      rotation: Math.random() * Math.PI * 2, // Rotasi putaran kristal
-      rotSpeed: (Math.random() - 0.5) * 0.015, // Putaran pelan yang elegan saat jatuh
-      opacity: Math.random() * 0.25 + 0.72 // Opasitas tinggi (72% - 97%) agar jelas terlihat di layar putih
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.015,
+      opacity: Math.random() * 0.25 + 0.72
     };
   },
 
@@ -366,7 +322,6 @@ const snow = {
       f.y += f.speedY;
       f.x += f.speedX + Math.sin(f.swing) * 0.5;
 
-      // Jika kristal salju melewati batas bawah atau samping layar, daur ulang ke atas
       if (f.y > height + f.size + 15) {
         this.flakes[i] = this.createFlake(false);
       }
@@ -376,7 +331,6 @@ const snow = {
         f.x = width + f.size;
       }
 
-      // Gambar sprite kristal salju dengan transformasi posisi, skala, rotasi, dan opasitas
       if (f.sprite) {
         this.ctx.save();
         this.ctx.translate(f.x, f.y);

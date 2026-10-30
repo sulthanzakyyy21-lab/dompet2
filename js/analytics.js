@@ -10,6 +10,7 @@ const analytics = {
 
     this.renderTrendChart(filteredTxs);
     this.renderDoughnutChart(filteredTxs);
+    this.renderCategoryAnalysis(filteredTxs);
   },
 
   renderTrendChart(filteredTxs) {
@@ -25,9 +26,9 @@ const analytics = {
     filteredTxs.forEach(tx => {
       const day = new Date(tx.fullDate).getDate();
       if (tx.type === 'in') {
-        incomeData[day - 1] += Number(tx.amount);
+        incomeData[day - 1] += Number(tx.amount || 0);
       } else if (tx.type === 'out') {
-        expenseData[day - 1] += Number(tx.amount);
+        expenseData[day - 1] += Number(tx.amount || 0);
       }
     });
 
@@ -35,10 +36,9 @@ const analytics = {
       this.trendChart.destroy();
     }
 
-    Chart.defaults.color = '#64748b'; // slate-500
+    Chart.defaults.color = '#64748b';
     Chart.defaults.font.family = "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-    // Create subtle gradient fills
     const incomeGradient = ctx.createLinearGradient(0, 0, 0, 300);
     incomeGradient.addColorStop(0, 'rgba(16, 185, 129, 0.18)');
     incomeGradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
@@ -55,7 +55,7 @@ const analytics = {
           {
             label: 'Arus Kas Masuk',
             data: incomeData,
-            borderColor: '#059669', // emerald-600
+            borderColor: '#059669',
             backgroundColor: incomeGradient,
             tension: 0.35,
             fill: true,
@@ -69,7 +69,7 @@ const analytics = {
           {
             label: 'Arus Kas Keluar',
             data: expenseData,
-            borderColor: '#dc2626', // red-600
+            borderColor: '#dc2626',
             backgroundColor: expenseGradient,
             tension: 0.35,
             fill: true,
@@ -138,24 +138,30 @@ const analytics = {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    const walletExpenses = {};
-    state.wallets.forEach(w => walletExpenses[w.id] = 0);
-
+    const categoryExpenses = {};
     filteredTxs.forEach(tx => {
-      if (tx.type === 'out' && walletExpenses[tx.walletId] !== undefined) {
-        walletExpenses[tx.walletId] += Number(tx.amount);
+      if (tx.type === 'out') {
+        let cat = tx.category;
+        if (!cat) {
+          const matched = state.categories.find(c => tx.desc && tx.desc.toLowerCase().includes(c.toLowerCase()));
+          cat = matched || tx.desc || 'Lainnya';
+        }
+        categoryExpenses[cat] = (categoryExpenses[cat] || 0) + Number(tx.amount || 0);
       }
     });
+
+    const palette = ['#f43f5e', '#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b', '#84cc16'];
+    const sortedCats = Object.entries(categoryExpenses).sort((a, b) => b[1] - a[1]);
 
     const labels = [];
     const data = [];
     const backgroundColors = [];
 
-    state.wallets.forEach(w => {
-      if (walletExpenses[w.id] > 0) {
-        labels.push(w.name);
-        data.push(walletExpenses[w.id]);
-        backgroundColors.push(w.hex || '#0284c7');
+    sortedCats.forEach(([cat, amt], idx) => {
+      if (amt > 0) {
+        labels.push(cat);
+        data.push(amt);
+        backgroundColors.push(palette[idx % palette.length]);
       }
     });
 
@@ -164,7 +170,7 @@ const analytics = {
     }
 
     if (data.length === 0) {
-      labels.push('Belum ada transaksi');
+      labels.push('Belum ada pengeluaran');
       data.push(1);
       backgroundColors.push('#f1f5f9');
     }
@@ -192,7 +198,7 @@ const analytics = {
               boxHeight: 8,
               usePointStyle: true,
               pointStyle: 'circle',
-              padding: 14,
+              padding: 12,
               font: { size: 11, weight: '600' } 
             } 
           },
@@ -202,14 +208,112 @@ const analytics = {
             cornerRadius: 8,
             callbacks: {
               label: function(context) {
-                if (data.length === 1 && data[0] === 1 && labels[0] === 'Belum ada transaksi') return ' Rp 0';
-                return ' ' + context.label + ': ' + utils.formatRupiah(context.raw);
+                if (data.length === 1 && data[0] === 1 && labels[0] === 'Belum ada pengeluaran') return ' Rp 0';
+                const total = data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((context.raw / total) * 100).toFixed(1) : 0;
+                return ` ${context.label}: ${utils.formatRupiah(context.raw)} (${pct}%)`;
               }
             }
           }
         },
-        cutout: '72%'
+        cutout: '70%'
       }
     });
+  },
+
+  renderCategoryAnalysis(filteredTxs) {
+    const expenseTxs = filteredTxs.filter(tx => tx.type === 'out');
+    const totalExpense = expenseTxs.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+    const categoryMap = {};
+    expenseTxs.forEach(tx => {
+      let cat = tx.category;
+      if (!cat) {
+        const matched = state.categories.find(c => tx.desc && tx.desc.toLowerCase().includes(c.toLowerCase()));
+        cat = matched || tx.desc || 'Lainnya';
+      }
+      categoryMap[cat] = (categoryMap[cat] || 0) + Number(tx.amount || 0);
+    });
+
+    const sortedCats = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]);
+
+    const highlightEl = document.getElementById('analytics-top-category');
+    const rankingEl = document.getElementById('analytics-category-ranking');
+    const totalSpentEl = document.getElementById('analytics-total-spent');
+
+    if (totalSpentEl) {
+      totalSpentEl.textContent = utils.formatRupiah(totalExpense);
+    }
+
+    if (!rankingEl) return;
+
+    if (sortedCats.length === 0 || totalExpense === 0) {
+      if (highlightEl) {
+        highlightEl.innerHTML = `
+          <div class="p-4 bg-slate-50 border border-slate-200/80 rounded-2xl text-center">
+            <p class="text-xs font-semibold text-slate-500">Belum ada pengeluaran pada bulan ini untuk dianalisis.</p>
+          </div>
+        `;
+      }
+      rankingEl.innerHTML = `
+        <div class="py-8 text-center text-slate-400 text-xs">
+          Belum ada catatan transaksi pengeluaran pada periode ini.
+        </div>
+      `;
+      return;
+    }
+
+    const topCategory = sortedCats[0];
+    const topPct = ((topCategory[1] / totalExpense) * 100).toFixed(1);
+
+    if (highlightEl) {
+      highlightEl.innerHTML = `
+        <div class="p-4 sm:p-5 bg-gradient-to-r from-rose-50 via-amber-50/40 to-orange-50 border border-rose-200/80 rounded-2xl shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center font-bold text-lg shadow-sm flex-shrink-0">
+              🔥
+            </div>
+            <div>
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-full border border-rose-200">Pengeluaran Terbanyak</span>
+              <h4 class="text-sm sm:text-base font-bold text-slate-900 mt-0.5">Uang paling banyak dipakai untuk <span class="text-rose-600 underline decoration-rose-300 decoration-2">${topCategory[0]}</span></h4>
+              <p class="text-xs text-slate-500">Menyerap <span class="font-semibold text-slate-800 font-mono">${topPct}%</span> dari seluruh pengeluaran bulan ini.</p>
+            </div>
+          </div>
+          <div class="text-left sm:text-right font-mono bg-white/80 sm:bg-transparent px-3 py-2 sm:p-0 rounded-xl border border-rose-100 sm:border-0">
+            <span class="text-[10px] uppercase font-bold text-slate-400 block font-sans">Total Terpakai</span>
+            <span class="text-base sm:text-lg font-bold text-rose-600">${utils.formatRupiah(topCategory[1])}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    const palette = ['#f43f5e', '#0284c7', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#64748b', '#84cc16'];
+
+    rankingEl.innerHTML = sortedCats.map(([catName, amt], idx) => {
+      const pct = ((amt / totalExpense) * 100).toFixed(1);
+      const barColor = palette[idx % palette.length];
+      const isTop = idx === 0;
+
+      return `
+        <div class="p-3 bg-white border border-slate-200/80 hover:border-slate-300 rounded-xl transition">
+          <div class="flex items-center justify-between text-xs mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${isTop ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600 font-mono'}">
+                #${idx + 1}
+              </span>
+              <span class="font-bold text-slate-900 text-xs sm:text-sm">${catName}</span>
+              ${isTop ? '<span class="text-[9px] font-bold px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded-full">Terbanyak</span>' : ''}
+            </div>
+            <div class="text-right font-mono">
+              <span class="font-bold text-slate-900 text-xs sm:text-sm">${utils.formatRupiah(amt)}</span>
+              <span class="text-[11px] text-slate-400 ml-1 font-semibold">(${pct}%)</span>
+            </div>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-500" style="width: ${pct}%; background-color: ${barColor};"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 };

@@ -17,7 +17,6 @@ const utils = {
     return txDate.getMonth() === today.getMonth() && txDate.getFullYear() === today.getFullYear();
   },
 
-  // Format angka murni dengan pemisah ribuan koma (contoh: 100000 -> "100,000")
   formatNumber: (number) => {
     if (number === null || number === undefined || number === '') return '';
     const clean = typeof number === 'number' ? number : utils.parseNumber(number);
@@ -25,26 +24,21 @@ const utils = {
     return clean.toLocaleString('en-US');
   },
 
-  // Parsing fleksibel dari string berformat koma, titik, atau shorthand (100k, 50rb, 1.5jt, 2m) ke integer
   parseNumber: (value) => {
     if (typeof value === 'number') return isNaN(value) ? 0 : Math.round(value);
     if (!value) return 0;
     const str = String(value).trim().toLowerCase();
     if (!str) return 0;
 
-    // Cek format shorthand: misal 100k, 100rb, 1.5jt, 2m, 2,5k, 500ribu
     const shorthandMatch = str.match(/^([\d.,]+)\s*(k|rb|ribu|m|jt|juta|b|mly)?$/i);
     if (shorthandMatch) {
       let numStr = shorthandMatch[1];
       const unit = (shorthandMatch[2] || '').toLowerCase();
 
-      // Jika ada unit shorthand dan koma digunakan sebagai desimal (contoh: 1,5k atau 2,5jt)
       if (unit && numStr.includes(',') && !numStr.includes('.')) {
         numStr = numStr.replace(',', '.');
       } else {
-        // Hilangkan pemisah ribuan koma
         numStr = numStr.replace(/,/g, '');
-        // Tangani titik sebagai pemisah ribuan standar Indonesia jika tidak ada desimal jelas
         if ((numStr.match(/\./g) || []).length > 1 || (numStr.includes('.') && numStr.split('.')[1].length === 3 && !unit)) {
           numStr = numStr.replace(/\./g, '');
         }
@@ -63,12 +57,10 @@ const utils = {
       return Math.round(parsed);
     }
 
-    // Fallback: ambil semua digit angka
     const clean = str.replace(/\D/g, '');
     return clean ? parseInt(clean, 10) : 0;
   },
 
-  // Pasang sistem otomatis format koma dan ekspansi shorthand pada input elemen
   setupCurrencyInput: (input) => {
     if (!input || input.dataset.currencyFormatted === 'true') return;
     input.dataset.currencyFormatted = 'true';
@@ -77,7 +69,6 @@ const utils = {
     input.setAttribute('inputmode', 'numeric');
     input.setAttribute('autocomplete', 'off');
 
-    // Format nilai awal jika ada
     if (input.value) {
       const parsed = utils.parseNumber(input.value);
       if (parsed > 0) {
@@ -85,13 +76,11 @@ const utils = {
       }
     }
 
-    // Keydown listener untuk shortcut instant k / m dan navigasi backspace di sekitar koma
     input.addEventListener('keydown', (e) => {
       const key = e.key.toLowerCase();
       const cursorPos = input.selectionStart || 0;
       const val = input.value;
 
-      // Saat backspace tepat setelah koma, hapus angka sebelum koma
       if (e.key === 'Backspace' && input.selectionStart === input.selectionEnd && cursorPos > 0) {
         if (val[cursorPos - 1] === ',') {
           e.preventDefault();
@@ -115,7 +104,6 @@ const utils = {
         }
       }
 
-      // Shortcut instan huruf 'k' (ribuan) atau 'm' (jutaan)
       if (key === 'k' || key === 'm') {
         e.preventDefault();
         const currentNum = utils.parseNumber(val);
@@ -131,12 +119,10 @@ const utils = {
       }
     });
 
-    // Input listener: live thousand comma formatting & shortcut handling saat paste atau ngetik
     input.addEventListener('input', () => {
       const rawVal = input.value;
       if (!rawVal) return;
 
-      // Jika input mengandung teks shorthand (k, rb, m, jt)
       if (/[kmbjt]/i.test(rawVal)) {
         const parsed = utils.parseNumber(rawVal);
         if (parsed > 0) {
@@ -146,7 +132,6 @@ const utils = {
         }
       }
 
-      // Format ribuan biasa dengan kursor terpreservasi
       const cursorPos = input.selectionStart || 0;
       const digitsBeforeCursor = rawVal.slice(0, cursorPos).replace(/\D/g, '').length;
       const digitsOnly = rawVal.replace(/\D/g, '');
@@ -165,7 +150,6 @@ const utils = {
       const formatted = num.toLocaleString('en-US');
       input.value = formatted;
 
-      // Kembalikan posisi kursor sesuai digit yang telah diketik
       let newCursorPos = 0;
       let count = 0;
       while (newCursorPos < formatted.length && count < digitsBeforeCursor) {
@@ -176,4 +160,3 @@ const utils = {
     });
   }
 };
-
